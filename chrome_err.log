@@ -1,6 +1,0 @@
-[109160:78476:1019/195338.504:INFO:components\enterprise\browser\controller\chrome_browser_cloud_management_controller.cc:241] No machine level policy manager exists.
-[109160:109000:1019/195338.588:ERROR:chrome\browser\extensions\external_registry_loader_win.cc:147] Missing value path for key Software\Google\Chrome\Extensions\dngcpimnedloihjnnfngkgjoidhnaolf.
-[109160:109000:1019/195338.590:ERROR:chrome\browser\extensions\external_registry_loader_win.cc:147] Missing value path for key Software\Google\Chrome\Extensions\fcoeoabgfenejglbffodgkkbkcdhcgfn.
-[109160:78476:1019/195338.780:WARNING:chrome\browser\extensions\external_registry_loader_win.cc:236] Error observing HKLM: Access is denied. (0x5)
-[109160:78476:1019/195339.675:INFO:CONSOLE:0] "<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">", source: http://localhost:4173/ (0)
-272732 bytes written to file C:\Users\Arthur\Desktop\П AURA\shot.png
