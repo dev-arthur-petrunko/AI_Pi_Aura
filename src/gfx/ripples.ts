@@ -6,6 +6,9 @@
 
 export const MAX_DROPS = 24;
 
+/** Максимальный возраст капли, секунды. После — капля исчезает совсем. */
+export const DROP_LIFETIME = 9.0;
+
 /** Детерминированный pseudo-random: одна и та же цифра на одной позиции — одно место. */
 export function hashPos(i: number): { x: number; y: number } {
   const f = (n: number): number => {
@@ -41,6 +44,17 @@ export class Ripples {
 
   clear(): void {
     this.drops = [];
+  }
+
+  /**
+   * Убирает капли старше DROP_LIFETIME.
+   * Без этого за 5 минут набирается 24 кольца и кадр превращается в паутину.
+   */
+  prune(time: number): void {
+    if (this.drops.length === 0) return;
+    const cutoff = time - DROP_LIFETIME;
+    const keep = this.drops.filter((d) => d.birth > cutoff);
+    if (keep.length !== this.drops.length) this.drops = keep;
   }
 
   get count(): number {

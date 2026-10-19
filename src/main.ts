@@ -6,7 +6,7 @@
 
 import './styles.css';
 import { AudioEngine } from './audio/engine.ts';
-import { Ripples } from './gfx/ripples.ts';
+import { Ripples, hashPos } from './gfx/ripples.ts';
 import { Renderer } from './gfx/renderer.ts';
 import { formatNum, getLang, initLang, onLangChange } from './i18n/index.ts';
 import { FeynmanDetector } from './pi/feynman.ts';
@@ -194,6 +194,8 @@ function frame(now: number): void {
     waterTime += dt;
     scheduler();
   }
+  // старые капли уходят, иначе кадр зарастает кольцами
+  ripples.prune(waterTime);
   pulse *= Math.exp(-dt * 2.2);
   if (pulse < 0.01) pulse = 0;
   renderFrame();
@@ -294,13 +296,18 @@ if (location.hash.startsWith('#debug')) {
   (window as unknown as { __aura: object }).__aura = {
     seed(n: number): void {
       ripples.clear();
+      // останавливаем поток: кадр становится полностью детерминированным
+      frozen = true;
       for (let i = 0; i < n; i++) {
         const code = (i * 3 + 2) % 10;
+        // те же детерминированные места, что и в обычном потоке
+        const p = hashPos(i);
         ripples.add(
-          i * 0.04 + 0.12,
-          0.15 + ((i * 37) % 70) / 100,
+          p.x,
+          p.y,
           code,
-          waterTime - (i % 4) * 0.8,
+          // фиксированный возраст: кольцо уже разошлось и читается
+          waterTime - 1.1 - (i % 4) * 0.55,
           0.7,
         );
       }

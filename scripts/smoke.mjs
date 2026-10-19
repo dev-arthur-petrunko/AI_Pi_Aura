@@ -74,10 +74,17 @@ await send('Page.addScriptToEvaluateOnNewDocument', {
       window.AudioContext = CountingAudioContext;
       window.webkitAudioContext = CountingAudioContext;
     }
+    // Чистое состояние: позиция в π не влияет на внешний вид.
+    // Ставим ДО старта приложения — иначе pagehide старой страницы
+    // допишет старый индекс поверх сброса.
+    try { localStorage.setItem('pi.index', '0'); } catch (e) {}
   `,
 });
+// Уводим старую страницу в about:blank, чтобы её pagehide не восстановил позицию.
+await send('Page.navigate', { url: 'about:blank' });
+await sleep(600);
 await send('Page.navigate', { url: 'http://localhost:4173/?silent=1#debug' });
-await sleep(3500);
+await sleep(3000);
 
 // 2. «первое касание» — pointerdown/pointerup по центру воды
 const evalRes = await send('Runtime.evaluate', {

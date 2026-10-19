@@ -17,8 +17,8 @@ uniform vec2 uTilt;       // наклон телефона (гироскоп), -
 uniform float uPulse;     // пульс ядра π в такт нотам
 uniform vec4 uDrops[24];  // x, y, birth, code+weight (пустой слот: code+weight == 0)
 
-const vec3 BG_TOP = vec3(0.039, 0.059, 0.141); // #0A0F24
-const vec3 BG_BOTTOM = vec3(0.020, 0.024, 0.051); // #05060D
+const vec3 BG_TOP = vec3(0.016, 0.024, 0.058); // #04060F — почти чёрный небосвод
+const vec3 BG_BOTTOM = vec3(0.004, 0.006, 0.016); // #010104 — дно
 
 // --- шум ---------------------------------------------------------------
 
@@ -87,13 +87,17 @@ void main() {
   cuv += vec2(t * 0.02, t * 0.013);
   float c1 = fbm(cuv);
   float c2 = fbm(cuv * 1.7 + 4.2 - vec2(t * 0.017, 0.0));
-  float caustic = pow(abs(c1 - c2) * 2.0, 3.0);
-  vec3 causticTint = mix(vec3(0.10, 0.22, 0.40), vec3(0.05, 0.12, 0.35), dive);
-  col += causticTint * caustic * (0.16 - 0.08 * dive) * (1.0 - 0.8 * uMirror);
+  // жёсткая пороговая выборка: сеть света, а не равномерная дымка
+  float caustic = smoothstep(0.22, 0.55, abs(c1 - c2) * 2.0);
+  caustic *= caustic;
+  vec3 causticTint = mix(vec3(0.06, 0.15, 0.30), vec3(0.03, 0.09, 0.26), dive);
+  col += causticTint * caustic * (0.055 - 0.03 * dive) * (1.0 - 0.85 * uMirror);
 
   // --- 3. кольца-волны + 4. metaballs ----------------------------------
   float ringField = 0.0;
+  vec3 ringTint = vec3(0.0);
   float ballField = 0.0;
+  float coreField = 0.0;
   vec3 glow = vec3(0.0);
 
   for (int i = 0; i < 24; i++) {
@@ -109,33 +113,51 @@ void main() {
     float r = length(p - dp);
     float damp = (1.0 - 0.85 * uMirror);
 
-    // кольцо: тонкий гребень (Ricker) — один яркий фронт + полутень по краям
-    float dx = r - 0.22 * age;
-    float q = dx * dx * 170.0; // ширина фронта ~0.11 по r
-    float ring = (1.0 - q) * exp(-q) * exp(-0.55 * age);
-    ringField += ring * weight * damp * exp(-r * 1.2);
-
-    // метабол: 1/(r²+ε) с быстрым затуханием — светит только возле капли
-    float m = weight * (0.30 + 0.12 * sin(t * 1.7 + code)) * exp(-r * 4.5) / (r * r * 10.0 + 0.30);
-    ballField += m * exp(-age * 0.5);
-
     vec3 dc = paletteColor(code);
-    glow += dc * exp(-r * 3.6) * weight * exp(-age * 0.55) * damp;
+
+    // --- кольцо: тонкий яркий фронт (гауссиан), радиус растёт медленно ---
+    // расширение насыщается: кольцо не расползается на весь экран
+    float radius = 0.020 + 0.16 * (1.0 - exp(-age * 0.28));
+    float ringR = exp(-pow((r - radius) * 135.0, 2.0));
+    // второй, более слабый эхо-фронт — глубина, без «каши»
+    float echoR = exp(-pow((r - radius * 1.75) * 165.0, 2.0));
+    float ringLife = exp(-age * 0.40);
+    float rings = (ringR + 0.20 * echoR) * weight * damp * ringLife;
+    ringField += rings;
+    ringTint += dc * rings;
+
+    // --- ядро капли: крошечная яркая точка ---
+    // медленное затухание, чтобы ядро оставалось «якорем» капли
+    coreField += exp(-r * 85.0) * exp(-age * 0.55) * weight;
+
+    // --- метабол: компактное ядро, не заливает кадр ---
+    float m = weight * (0.85 + 0.25 * sin(t * 1.7 + code)) * exp(-r * 48.0) / (r * r * 320.0 + 0.30);
+    ballField += m * exp(-age * 0.45);
+
+    // --- локальная аура: узкая, не заливает кадр ---
+    glow += dc * exp(-r * 42.0) * weight * exp(-age * 0.8) * damp;
   }
 
-  // кольца: тонкая светящаяся линия + мягкая тень изнутри кольца
-  float ringPos = max(ringField, 0.0);
+  // кольца: тонкая светящаяся линия, окрашенная цветом цифры.
+  // Насыщающая кривая вместо линейной суммы: перекрывающиеся кольца
+  // не складываются в молочную пелену, а остаются чёткими линиями.
+  float ringSum = max(ringField, 0.0);
+  float ringPos = 1.0 - exp(-ringSum * 1.6);
   float ringGlow = ringPos * ringPos;
-  col += vec3(0.55, 0.75, 1.0) * ringPos * 0.30 + vec3(0.8, 0.9, 1.0) * ringGlow * 0.24;
-  col *= 1.0 - 0.10 * clamp(-ringField, 0.0, 1.0);
+  vec3 ringCol = ringTint / max(ringField, 0.0001);
+  col += ringCol * ringPos * 0.78 + vec3(0.92, 0.97, 1.0) * ringGlow * 0.26;
 
-  // metaballs: высокий порог — светятся только 2–3 слияющихся пятна
-  float blob = smoothstep(0.85, 1.9, ballField);
-  vec3 blobTint = mix(vec3(0.10, 0.28, 0.45), vec3(0.35, 0.55, 0.85), clamp(ballField * 0.4, 0.0, 1.0));
-  col += blobTint * blob * (0.12 + 0.12 * uPulse);
+  // ядро капли — самая яркая точка, чёткая граница
+  col += vec3(0.92, 0.97, 1.0) * coreField * 1.45;
 
-  // --- 5. аура: аддитивное свечение ------------------------------------
-  col += glow * (0.5 + 0.5 * uPulse) * 0.30;
+  // metaballs: маленькие тёплые пятна у ядер, сливаются при близости
+  float blob = smoothstep(0.85, 1.8, ballField);
+  vec3 blobTint = mix(vec3(0.10, 0.30, 0.52), vec3(0.42, 0.64, 0.95), clamp(ballField * 0.5, 0.0, 1.0));
+  col += blobTint * blob * (0.10 + 0.10 * uPulse);
+
+  // --- 5. аура: аддитивное свечение, насыщенное (без молочной пелены) ---
+  vec3 glowSat = vec3(1.0) - exp(-glow * 2.2);
+  col += glowSat * (0.5 + 0.5 * uPulse) * 0.09;
 
   // --- зеркальность в точке Фейнмана + мягкая вспышка ------------------
   if (uMirror > 0.0) {
@@ -146,14 +168,15 @@ void main() {
   }
 
   // --- 7. финал: tone mapping + зерно + виньетка ------------------------
-  col = col / (col + vec3(0.85));            // мягкое сжатие яркости
-  col = pow(col, vec3(0.95));
+  // ACES-подобная кривая: чёрный остаётся чёрным, света не выжигаются
+  col = col * (2.51 * col + 0.03) / (col * (2.43 * col + 0.59) + 0.14);
 
-  float vig = smoothstep(1.35, 0.35, length(p));
-  col *= mix(0.75, 1.0, vig);
+  float vig = smoothstep(1.30, 0.30, length(p));
+  col *= mix(0.55, 1.0, vig);
 
-  float grain = (hash21(gl_FragCoord.xy + fract(t) * 371.0) - 0.5) * 0.028;
-  col += grain;
+  // зерно только в тенях — не «соль» на всём кадре
+  float grain = (hash21(gl_FragCoord.xy + fract(t) * 371.0) - 0.5) * 0.012;
+  col += grain * (1.0 - smoothstep(0.0, 0.25, dot(col, vec3(0.333))));
 
   fragColor = vec4(max(col, 0.0), 1.0);
 }
