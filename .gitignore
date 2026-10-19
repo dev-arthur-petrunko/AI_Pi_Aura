@@ -5,3 +5,4 @@ dist/
 !public/*.png
 .DS_Store
 .vite/
+.*.pid

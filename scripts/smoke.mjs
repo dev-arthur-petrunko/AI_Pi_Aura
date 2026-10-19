@@ -1,19 +1,20 @@
 ﻿/**
  * Живая smoke-проверка через Chrome DevTools Protocol:
  * открывает страницу, «касает» воду, собирает ошибки консоли и делает скриншот.
- * Запуск: node scripts/smoke.mjs <port> <outPng> [seed]
- * Headless-Chrome для тестов запускать с --autoplay-policy=no-user-gesture-required,
- * иначе AudioContext остаётся suspended и синтетический tap не разблокирует звук.
+ * Запуск: node scripts/smoke.mjs <cdpPort> <outPng> [seed] [previewPort]
+ * Страница открывается с ?silent=1 — AudioContext не создаётся вовсе,
+ * поэтому проверка полностью беззвучна.
  */
 const DEBUG_PORT = Number(process.argv[2] || 9222);
 const OUT = process.argv[3] || 'shot-clicked.png';
 const SEED = Number(process.argv[4] || 0); // посеять N капель (#debug)
+const PREVIEW_PORT = Number(process.argv[5] || 4174);
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // 1. находим страницу
 const list = await fetch(`http://localhost:${DEBUG_PORT}/json`).then((r) => r.json());
-const page = list.find((t) => t.type === 'page' && t.url.includes(':4173')) ?? list.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
+const page = list.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
 if (!page) {
   console.error('no page target');
   process.exit(1);
@@ -83,7 +84,10 @@ await send('Page.addScriptToEvaluateOnNewDocument', {
 // Уводим старую страницу в about:blank, чтобы её pagehide не восстановил позицию.
 await send('Page.navigate', { url: 'about:blank' });
 await sleep(600);
-await send('Page.navigate', { url: 'http://localhost:4173/?silent=1#debug' });
+// Nonce в query: иначе переход на тот же URL+hash — same-document navigation,
+// Chrome не перезагружает страницу и мы проверяем старый бандл.
+const nonce = Date.now().toString(36);
+await send('Page.navigate', { url: `http://localhost:${PREVIEW_PORT}/?silent=1&v=${nonce}#debug` });
 await sleep(3000);
 
 // 2. «первое касание» — pointerdown/pointerup по центру воды

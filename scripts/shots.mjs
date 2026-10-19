@@ -2,15 +2,21 @@
  * Снимает серию кадров воды с разным числом капель (1, 5, 24)
  * и печатает измерения яркости для каждого.
  *
- * Запуск: node scripts/shots.mjs [port]
+ * Запуск: node scripts/shots.mjs [cdpPort] [previewPort] [tag]
+ * Пример: node scripts/shots.mjs 9222 4174 v2
+ *
+ * Звук: страница открывается с ?silent=1 — AudioContext не создаётся вовсе.
  */
 import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 
-const PORT = Number(process.argv[2] || 9222);
+const CDP_PORT = Number(process.argv[2] || 9222);
+const PREVIEW_PORT = Number(process.argv[3] || 4174);
+const TAG = process.argv[4] || '';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const list = await fetch(`http://localhost:${PORT}/json`).then((r) => r.json());
-const page = list.find((t) => t.type === 'page');
+const list = await fetch(`http://localhost:${CDP_PORT}/json`).then((r) => r.json());
+const page = list.find((t) => t.type === 'page' && t.webSocketDebuggerUrl);
 if (!page) {
   console.error('no page target');
   process.exit(1);
@@ -59,7 +65,11 @@ await send('Page.addScriptToEvaluateOnNewDocument', {
 });
 await send('Page.navigate', { url: 'about:blank' });
 await sleep(600);
-await send('Page.navigate', { url: 'http://localhost:4173/?silent=1#debug' });
+// Уникальный nonce в query: без него переход на тот же URL+hash — это
+// same-document navigation, Chrome НЕ перезагружает страницу и мы снимаем
+// старый бандл. Nonce гарантирует свежую загрузку index.html + хэш-бандла.
+const nonce = Date.now().toString(36);
+await send('Page.navigate', { url: `http://localhost:${PREVIEW_PORT}/?silent=1&v=${nonce}#debug` });
 await sleep(2500);
 
 await send('Runtime.evaluate', {
@@ -79,13 +89,12 @@ for (const n of [1, 5, 24]) {
   });
   await sleep(1400);
   const shot = await send('Page.captureScreenshot', { format: 'png' });
-  const { writeFileSync } = await import('node:fs');
-  const file = `shot-d${n}.png`;
+  const file = `shot-d${n}${TAG}.png`;
   writeFileSync(file, Buffer.from(shot.result.data, 'base64'));
   const stats = execFileSync('node', ['scripts/pxstats.mjs', file], { encoding: 'utf8' });
   const s = JSON.parse(stats);
   console.log(
-    `drops=${n}  mean=${s.meanLum}  max=${s.maxLum}  >0.05=${s.pctAbove['0.05']}%  >0.2=${s.pctAbove['0.20']}%`,
+    `drops=${String(n).padStart(2)}  mean=${s.meanLum}  max=${s.maxLum}  p99=${s.percentiles?.p99 ?? '-'}  >0.05=${s.pctAbove['0.05']}%  >0.2=${s.pctAbove['0.20']}%`,
   );
 }
 

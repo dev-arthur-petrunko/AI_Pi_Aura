@@ -94,11 +94,29 @@ void main() {
   col += causticTint * caustic * (0.055 - 0.03 * dive) * (1.0 - 0.85 * uMirror);
 
   // --- 3. кольца-волны + 4. metaballs ----------------------------------
-  float ringField = 0.0;
-  vec3 ringTint = vec3(0.0);
+  // Перекрывающиеся кольца НЕ складываются: по яркости берётся максимум,
+  // цвет усредняется по вкладу. Иначе 24 кольца дают молочную паутину.
+  float ringMax = 0.0;        // самая яркая линия в этой точке
+  float ringWeightSum = 0.0;  // сумма вкладов — для усреднения цвета
+  vec3 ringHue = vec3(0.0);
+  float ringCrowd = 0.0;      // сколько колец перекрылось здесь
   float ballField = 0.0;
   float coreField = 0.0;
-  vec3 glow = vec3(0.0);
+  float glowMax = 0.0;
+  float glowWeightSum = 0.0;
+  vec3 glowHue = vec3(0.0);
+
+  // Предварительный проход: считаем активные капли. От их числа зависит
+  // толщина и яркость колец — при many drops они не должны слипаться.
+  float dropCount = 0.0;
+  for (int i = 0; i < 24; i++) {
+    if (uDrops[i].w > 0.0) dropCount += 1.0;
+  }
+  // Плотность: 1 капля — кольцо как в одиночном случае; 24 капли — линия
+  // примерно вдвое тоньше и в 1.6 раза тише (density ≈ 0.34).
+  float density = 1.0 / (1.0 + 0.085 * max(dropCount - 1.0, 0.0));
+  float ringWidth = mix(135.0, 330.0, 1.0 - density);   // тоньше при тесноте
+  float ringGain = mix(1.0, 0.42, 1.0 - density);      // и тише
 
   for (int i = 0; i < 24; i++) {
     vec4 d = uDrops[i];
@@ -116,36 +134,44 @@ void main() {
     vec3 dc = paletteColor(code);
 
     // --- кольцо: тонкий яркий фронт (гауссиан), радиус растёт медленно ---
-    // расширение насыщается: кольцо не расползается на весь экран
-    float radius = 0.020 + 0.16 * (1.0 - exp(-age * 0.28));
-    float ringR = exp(-pow((r - radius) * 135.0, 2.0));
+    // расширение насыщается: кольцо не расползается на весь экран.
+    // Потолок 0.11 — радиус меньше четверти кадра, кольца не слипаются.
+    float radius = 0.018 + 0.092 * (1.0 - exp(-age * 0.26));
+    float ringR = exp(-pow((r - radius) * ringWidth, 2.0));
     // второй, более слабый эхо-фронт — глубина, без «каши»
-    float echoR = exp(-pow((r - radius * 1.75) * 165.0, 2.0));
+    float echoR = exp(-pow((r - radius * 1.75) * (ringWidth * 1.22), 2.0));
     float ringLife = exp(-age * 0.40);
-    float rings = (ringR + 0.20 * echoR) * weight * damp * ringLife;
-    ringField += rings;
-    ringTint += dc * rings;
+    float rings = (ringR + 0.20 * echoR) * weight * damp * ringLife * ringGain;
+    // максимум вместо суммы: перекрытые кольца остаются тонкими линиями
+    ringMax = max(ringMax, rings);
+    ringWeightSum += rings;
+    ringHue += dc * rings;
+    // «теснота»: кольца, попавшие в этот пиксель, приглушают друг друга
+    ringCrowd += smoothstep(0.35, 1.0, rings);
 
     // --- ядро капли: крошечная яркая точка ---
     // медленное затухание, чтобы ядро оставалось «якорем» капли
-    coreField += exp(-r * 85.0) * exp(-age * 0.55) * weight;
+    coreField = max(coreField, exp(-r * 85.0) * exp(-age * 0.55) * weight);
 
     // --- метабол: компактное ядро, не заливает кадр ---
     float m = weight * (0.85 + 0.25 * sin(t * 1.7 + code)) * exp(-r * 48.0) / (r * r * 320.0 + 0.30);
     ballField += m * exp(-age * 0.45);
 
     // --- локальная аура: узкая, не заливает кадр ---
-    glow += dc * exp(-r * 42.0) * weight * exp(-age * 0.8) * damp;
+    float g = exp(-r * 42.0) * weight * exp(-age * 0.8) * damp * ringGain;
+    glowMax = max(glowMax, g);
+    glowWeightSum += g;
+    glowHue += dc * g;
   }
 
   // кольца: тонкая светящаяся линия, окрашенная цветом цифры.
-  // Насыщающая кривая вместо линейной суммы: перекрывающиеся кольца
-  // не складываются в молочную пелену, а остаются чёткими линиями.
-  float ringSum = max(ringField, 0.0);
-  float ringPos = 1.0 - exp(-ringSum * 1.6);
-  float ringGlow = ringPos * ringPos;
-  vec3 ringCol = ringTint / max(ringField, 0.0001);
-  col += ringCol * ringPos * 0.78 + vec3(0.92, 0.97, 1.0) * ringGlow * 0.26;
+  // Яркость = максимум вкладов (не сумма), цвет = взвешенное среднее.
+  vec3 ringCol = ringHue / max(ringWeightSum, 0.0001);
+  // перекрытие гасит кольца: в тесноте линии тоньше и тусклее
+  float crowd = 1.0 / (1.0 + 0.55 * max(ringCrowd - 1.0, 0.0));
+  float ringPos = 1.0 - exp(-ringMax * 1.6);
+  float ringGlow = ringPos * ringPos * crowd;
+  col += ringCol * ringPos * 0.78 * crowd + vec3(0.92, 0.97, 1.0) * ringGlow * 0.20;
 
   // ядро капли — самая яркая точка, чёткая граница
   col += vec3(0.92, 0.97, 1.0) * coreField * 1.45;
@@ -155,9 +181,10 @@ void main() {
   vec3 blobTint = mix(vec3(0.10, 0.30, 0.52), vec3(0.42, 0.64, 0.95), clamp(ballField * 0.5, 0.0, 1.0));
   col += blobTint * blob * (0.10 + 0.10 * uPulse);
 
-  // --- 5. аура: аддитивное свечение, насыщенное (без молочной пелены) ---
-  vec3 glowSat = vec3(1.0) - exp(-glow * 2.2);
-  col += glowSat * (0.5 + 0.5 * uPulse) * 0.09;
+  // --- 5. аура: локальное свечение, максимум вместо суммы (без пелены) ---
+  vec3 glowSat = vec3(1.0) - exp(-glowMax * 2.2);
+  vec3 glowCol = glowHue / max(glowWeightSum, 0.0001);
+  col += glowCol * glowSat * (0.5 + 0.5 * uPulse) * 0.13;
 
   // --- зеркальность в точке Фейнмана + мягкая вспышка ------------------
   if (uMirror > 0.0) {
