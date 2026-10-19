@@ -1,3 +1,4 @@
+import { SILENT } from '../config.ts';
 import { Drone } from './drone.ts';
 import { createImpulse } from './reverb.ts';
 import { freqForDigit, freqForX, type ScaleId } from './scales.ts';
@@ -41,9 +42,9 @@ export class AudioEngine {
     return this.ctx ? this.ctx.currentTime : performance.now() / 1000;
   }
 
-  /** Создаётся только после первого жеста пользователя. */
+  /** Создаётся только после первого жеста пользователя. В режиме тишины — никогда. */
   init(): void {
-    if (this.ctx) return;
+    if (this.ctx || SILENT) return;
     const Ctor =
       window.AudioContext ??
       (window as unknown as { webkitAudioContext?: typeof AudioContext })

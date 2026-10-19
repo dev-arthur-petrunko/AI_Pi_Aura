@@ -63,7 +63,20 @@ await send('Page.enable');
 await send('Emulation.setDeviceMetricsOverride', {
   width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
 });
-await send('Page.navigate', { url: 'http://localhost:4173/#debug' });
+await send('Page.addScriptToEvaluateOnNewDocument', {
+  source: `
+    window.__auraAudioContexts = 0;
+    const RealAC = window.AudioContext;
+    if (RealAC) {
+      class CountingAudioContext extends RealAC {
+        constructor(...args) { super(...args); window.__auraAudioContexts++; }
+      }
+      window.AudioContext = CountingAudioContext;
+      window.webkitAudioContext = CountingAudioContext;
+    }
+  `,
+});
+await send('Page.navigate', { url: 'http://localhost:4173/?silent=1#debug' });
 await sleep(3500);
 
 // 2. «первое касание» — pointerdown/pointerup по центру воды
@@ -110,10 +123,17 @@ const state = await send('Runtime.evaluate', {
     introHidden: document.getElementById('intro')?.classList.contains('is-hidden') ?? null,
     lang: document.documentElement.lang,
     audioState: (typeof window !== 'undefined' && window.__auraAudioState) || null,
+    audioContextsCreated: window.__auraAudioContexts ?? null,
   })`,
   returnByValue: true,
 });
 console.log('after 6s:', state.result?.result?.value);
+
+// 3.4 проверка тишины: AudioContext не должен создаваться вовсе
+const acCount = JSON.parse(state.result?.result?.value || '{}').audioContextsCreated;
+if (acCount !== 0) {
+  errors.push(`SILENCE VIOLATION: created ${acCount} AudioContext(s) in ?silent=1 mode`);
+}
 
 // 3.5 посев капель для приёмочного кадра (если задан)
 if (SEED > 0) {
