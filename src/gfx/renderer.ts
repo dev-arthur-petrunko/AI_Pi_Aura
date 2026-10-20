@@ -20,6 +20,8 @@ export interface FrameParams {
   motion: number; // 1 | 0.5
   tilt: [number, number];
   pulse: number;
+  flashDigit: number; // цифра, которая только что сыграла (-1 = никакая)
+  flashTime: number; // часы момента вспышки якоря
 }
 
 export interface RendererStats {
@@ -37,6 +39,7 @@ export class Renderer {
   private program: WebGLProgram | null = null;
   private uLoc: Record<string, WebGLUniformLocation | null> = {};
   private dropData = new Float32Array(MAX_DROPS * 4);
+  private anchorData = new Float32Array(10 * 4);
   private scale = 1;
   private frameEma = 16;
   private frameCount = 0;
@@ -153,6 +156,9 @@ export class Renderer {
       'uTilt',
       'uPulse',
       'uDrops',
+      'uAnchors',
+      'uFlashDigit',
+      'uFlashTime',
     ]) {
       // часть драйверов требует имя 'uDrops[0]' для uniform-массива
       this.uLoc[name] =
@@ -186,6 +192,7 @@ export class Renderer {
       this.gl?.viewport(0, 0, w, h);
       this.onResize(w, h);
     }
+    this.ripples.setViewport(w, h);
   }
 
   /** Автоподстройка: > 20 мс → −0.1, < 12 мс → +0.1 (каждые 60 кадров). */
@@ -230,8 +237,12 @@ export class Renderer {
     gl.uniform1f(this.uLoc.uMotion!, params.motion);
     gl.uniform2f(this.uLoc.uTilt!, params.tilt[0], params.tilt[1]);
     gl.uniform1f(this.uLoc.uPulse!, params.pulse);
+    gl.uniform1f(this.uLoc.uFlashDigit!, params.flashDigit);
+    gl.uniform1f(this.uLoc.uFlashTime!, params.flashTime);
     this.ripples.write(this.dropData);
     gl.uniform4fv(this.uLoc.uDrops!, this.dropData);
+    this.ripples.writeAnchors(this.anchorData);
+    gl.uniform4fv(this.uLoc.uAnchors!, this.anchorData);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 

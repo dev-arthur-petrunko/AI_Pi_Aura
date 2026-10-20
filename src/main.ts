@@ -51,6 +51,8 @@ let tiltTarget: [number, number] = [0, 0];
 let tiltCur: [number, number] = [0, 0];
 const lastDigits: number[] = [];
 let pauseStartedAt = 0;
+let lastPlayedDigit = -1; // цифра, чей якорь сейчас вспыхивает
+let lastPlayedAt = -1;    // часы воды момента вспышки
 
 const nowSec = (): number => {
   const ctx = engine.ctx;
@@ -115,6 +117,8 @@ function scheduleDigit(whenAudioOrSec: number): boolean {
 
   const birth = waterTime + delay;
   ripples.addAtIndex(index, digit, birth, 0.7);
+  lastPlayedDigit = digit;
+  lastPlayedAt = birth;
 
   hud.setDigit(index);
   hud.beat();
@@ -188,6 +192,8 @@ function renderFrame(): void {
     motion: reducedMotion ? 0.5 : 1,
     tilt: tiltCur,
     pulse,
+    flashDigit: lastPlayedDigit,
+    flashTime: lastPlayedAt,
   });
 }
 

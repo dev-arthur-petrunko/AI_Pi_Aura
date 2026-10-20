@@ -16,6 +16,9 @@ uniform float uMotion;    // 1.0 или 0.5 — prefers-reduced-motion
 uniform vec2 uTilt;       // наклон телефона (гироскоп), -1..1
 uniform float uPulse;     // пульс ядра π в такт нотам
 uniform vec4 uDrops[24];  // x, y, birth, code+weight (пустой слот: code+weight == 0)
+uniform vec4 uAnchors[10]; // x, y, code, baseAlpha (0.25) — точки-якоря цифр
+uniform float uFlashDigit; // цифра, которая только что сыграла (-1 = никакая)
+uniform float uFlashTime;  // часы момента вспышки якоря
 
 const vec3 BG_TOP = vec3(0.016, 0.024, 0.058); // #04060F — почти чёрный небосвод
 const vec3 BG_BOTTOM = vec3(0.004, 0.006, 0.016); // #010104 — дно
@@ -162,6 +165,28 @@ void main() {
     glowMax = max(glowMax, g);
     glowWeightSum += g;
     glowHue += dc * g;
+  }
+
+  // --- точки-якоря цифр (всегда видны, едва заметно) ----------------------
+  // Играющая цифра вспыхивает на ~600 мс.
+  for (int j = 0; j < 10; j++) {
+    vec4 a = uAnchors[j];
+    if (a.w <= 0.0) continue;
+    float code = a.z;
+    vec3 dc = paletteColor(code);
+    vec2 ap = (a.xy - 0.5) * vec2(aspect, 1.0);
+    float ar = length(p - ap);
+    float alpha = a.w; // 0.25 базовая
+    float flash = 1.0;
+    if (uFlashDigit >= 0.0 && float(j) == uFlashDigit) {
+      float age = uTime - uFlashTime;
+      if (age >= 0.0 && age < 0.6) {
+        flash = 1.0 + 4.0 * exp(-age / 0.10); // пик ~600 мс, потом затухает
+      }
+    }
+    float dot = exp(-ar * 95.0) * alpha * flash * 0.9;
+    col += dc * dot * 0.5;
+    col += vec3(0.92, 0.97, 1.0) * dot * 0.3;
   }
 
   // кольца: тонкая светящаяся линия, окрашенная цветом цифры.
