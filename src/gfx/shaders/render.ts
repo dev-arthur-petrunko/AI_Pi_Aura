@@ -1,4 +1,4 @@
-#version 300 es
+export const renderSrc = `#version 300 es
 precision highp float;
 in vec2 v;
 out vec4 o;
@@ -35,3 +35,4 @@ void main(){
   c*=1.-.44*dot(v-.5,v-.5);
   o=vec4(c,1);
 }
+`;

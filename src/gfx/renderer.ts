@@ -5,8 +5,8 @@
  * - если WebGL2 нет или нет float-текстур — mode = 'unavailable'.
  */
 
-import renderSrc from './shaders/render.frag.glsl?raw';
-import fullscreenVert from './shaders/fullscreen.vert.glsl?raw';
+import { renderSrc } from './shaders/render.ts';
+import { fullscreenVert } from './shaders/fullscreen.ts';
 import { Sim } from './sim.ts';
 import { Floor } from './floor.ts';
 

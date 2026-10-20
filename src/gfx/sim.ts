@@ -12,9 +12,9 @@
  * Если расширения нет — Sim не инициализируется (fallback: градиент + надпись).
  */
 
-import simSrc from './shaders/sim.frag.glsl?raw';
-import dropSrc from './shaders/drop.frag.glsl?raw';
-import fullscreenVert from './shaders/fullscreen.vert.glsl?raw';
+import { simSrc } from './shaders/sim.ts';
+import { dropSrc } from './shaders/drop.ts';
+import { fullscreenVert } from './shaders/fullscreen.ts';
 
 const vertexSrc = fullscreenVert;
 

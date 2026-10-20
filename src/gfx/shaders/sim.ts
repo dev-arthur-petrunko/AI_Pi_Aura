@@ -1,4 +1,4 @@
-#version 300 es
+export const simSrc = `#version 300 es
 precision highp float;
 in vec2 v;
 out vec4 o;
@@ -14,3 +14,4 @@ void main(){
   s.ba=normalize(cross(dy,dx)).xz;
   o=s;
 }
+`;
