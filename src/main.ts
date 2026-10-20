@@ -8,6 +8,7 @@ import './styles.css';
 import { AudioEngine } from './audio/engine.ts';
 import { Ripples, hashPos } from './gfx/ripples.ts';
 import { Renderer } from './gfx/renderer.ts';
+import { Trails } from './gfx/trails.ts';
 import { formatNum, getLang, initLang, onLangChange } from './i18n/index.ts';
 import { FeynmanDetector } from './pi/feynman.ts';
 import { PiStream } from './pi/piStream.ts';
@@ -33,6 +34,8 @@ const reducedMotion =
 
 const ripples = new Ripples();
 const renderer = new Renderer(canvas, ripples, () => undefined);
+const trails = new Trails();
+canvas.parentNode?.insertBefore(trails.container, canvas.nextSibling);
 const engine = new AudioEngine();
 const hud = new Hud(app);
 const stream = new PiStream();
@@ -117,6 +120,7 @@ function scheduleDigit(whenAudioOrSec: number): boolean {
 
   const birth = waterTime + delay;
   ripples.addAtIndex(index, digit, birth, 0.7);
+  trails.onDigit(digit, birth);
   lastPlayedDigit = digit;
   lastPlayedAt = birth;
 
@@ -130,6 +134,7 @@ function scheduleDigit(whenAudioOrSec: number): boolean {
   if (detector.push(digit, index)) {
     engine.feynmanChord();
     mirrorStart = waterTime;
+    trails.setFeynman(true, waterTime);
     hud.flash('feynman', undefined, 6000);
   }
   return true;
@@ -185,6 +190,8 @@ function mirrorAt(t: number): number {
 function renderFrame(): void {
   tiltCur[0] += (tiltTarget[0] - tiltCur[0]) * 0.06;
   tiltCur[1] += (tiltTarget[1] - tiltCur[1]) * 0.06;
+  const dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
+  trails.setScale(renderer.renderScale, dpr);
   renderer.render({
     time: waterTime,
     dive: diveAt(waterTime),
@@ -195,6 +202,7 @@ function renderFrame(): void {
     flashDigit: lastPlayedDigit,
     flashTime: lastPlayedAt,
   });
+  trails.render(waterTime);
 }
 
 function frame(now: number): void {
@@ -239,6 +247,7 @@ function toggleFreeze(): void {
   if (!started) return;
   frozen = !frozen;
   engine.setFrozen(frozen);
+  trails.setFrozen(frozen);
   if (frozen) {
     pauseStartedAt = nowSec();
     hud.setFrozenLabel([...lastDigits]);
