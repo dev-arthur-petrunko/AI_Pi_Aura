@@ -1,5 +1,5 @@
 /* π · Aura — минимальный Service Worker: кэш первого успеха + фоновое обновление. */
-const CACHE = 'pi-aura-v1';
+const CACHE = 'pi-aura-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

@@ -9,6 +9,9 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  define: {
+    __BUILD_ID__: JSON.stringify(process.env.VITE_BUILD_ID ?? 'dev'),
+  },
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],

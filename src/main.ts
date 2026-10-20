@@ -280,8 +280,8 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('resize', () => renderer.resize());
 window.addEventListener('orientationchange', () => renderer.resize());
 
-// PWA: офлайн-кэш после первой загрузки
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+// PWA: офлайн-кэш после первой загрузки (не в dev — чтобы видеть свежую версию)
+if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {
       /* офлайн-режим не критичен */
