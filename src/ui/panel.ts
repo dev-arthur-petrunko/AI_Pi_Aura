@@ -7,7 +7,7 @@
 
 import { formatNum, onLangChange, t } from '../i18n/index.ts';
 
-const BREAKPOINT = 1000;
+const BREAKPOINT = 600;
 const HISTORY_LIMIT = 200;
 
 const DIGIT_NOTES: Record<number, string> = {
@@ -162,17 +162,17 @@ export class Panel {
       this.footer.style.justifyContent = 'space-between';
       this.footer.style.marginTop = 'auto';
     } else {
-      this.panel.style.left = '0';
-      this.panel.style.top = '0';
+      this.panel.style.left = '12px';
+      this.panel.style.top = '12px';
       this.panel.style.bottom = 'auto';
       this.panel.style.width = 'auto';
       this.panel.style.height = 'auto';
       this.panel.style.transform = 'none';
-      this.panel.style.backdropFilter = 'none';
-      this.panel.style.background = 'transparent';
-      this.panel.style.border = 'none';
-      this.panel.style.borderRadius = '0';
-      this.panel.style.padding = '8px';
+      this.panel.style.backdropFilter = 'blur(12px) saturate(160%)';
+      this.panel.style.background = 'var(--glass)';
+      this.panel.style.border = '1px solid var(--glass-border)'
+      this.panel.style.borderRadius = 'var(--radius)'
+      this.panel.style.padding = '10px'
       this.panel.style.display = 'flex';
       this.panel.style.flexDirection = 'column';
       this.panel.style.gap = '0';
