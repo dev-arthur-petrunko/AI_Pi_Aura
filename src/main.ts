@@ -8,8 +8,6 @@ import './styles.css';
 import { AudioEngine } from './audio/engine.ts';
 import { Ripples, hashPos } from './gfx/ripples.ts';
 import { Renderer } from './gfx/renderer.ts';
-import { Trails } from './gfx/trails.ts';
-import { Drum } from './ui/drum.ts';
 import { formatNum, getLang, initLang, onLangChange } from './i18n/index.ts';
 import { FeynmanDetector } from './pi/feynman.ts';
 import { PiStream } from './pi/piStream.ts';
@@ -29,15 +27,9 @@ const canvas = document.getElementById('water') as HTMLCanvasElement;
 const core = document.getElementById('core') as HTMLElement;
 
 const state = loadState();
-const reducedMotion =
-  typeof matchMedia === 'function' &&
-  matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const ripples = new Ripples();
 const renderer = new Renderer(canvas, ripples, () => undefined);
-const trails = new Trails();
-canvas.parentNode?.insertBefore(trails.container, canvas.nextSibling);
-const drum = new Drum(app);
 const engine = new AudioEngine();
 const hud = new Hud(app);
 const stream = new PiStream();
@@ -51,13 +43,8 @@ let clockOffset = 0; // непрерывность часов после соз�
 let nextAt = 0; // план следующей ноты в часах воды
 let lastFrame = performance.now();
 let pulse = 0;
-let mirrorStart = -1; // момент точки Фейнмана в часах воды
-let tiltTarget: [number, number] = [0, 0];
-let tiltCur: [number, number] = [0, 0];
 const lastDigits: number[] = [];
 let pauseStartedAt = 0;
-let lastPlayedDigit = -1; // цифра, чей якорь сейчас вспыхивает
-let lastPlayedAt = -1;    // часы воды момента вспышки
 
 const nowSec = (): number => {
   const ctx = engine.ctx;
@@ -121,11 +108,8 @@ function scheduleDigit(whenAudioOrSec: number): boolean {
   engine.playDigit(digit, engine.ctx ? engine.ctx.currentTime + delay : undefined);
 
   const birth = waterTime + delay;
-  ripples.addAtIndex(index, digit, birth, 0.7);
-  trails.onDigit(digit, birth);
-  drum.update(digit, index, stream.peek(3));
-  lastPlayedDigit = digit;
-  lastPlayedAt = birth;
+  const drop = ripples.addAtIndex(index, digit, birth, 0.7);
+  renderer.addDrop(drop.x, drop.y, drop.radius, drop.strength);
 
   hud.setDigit(index);
   hud.beat();
@@ -136,8 +120,6 @@ function scheduleDigit(whenAudioOrSec: number): boolean {
 
   if (detector.push(digit, index)) {
     engine.feynmanChord();
-    mirrorStart = waterTime;
-    trails.setFeynman(true, waterTime);
     hud.flash('feynman', undefined, 6000);
   }
   return true;
@@ -162,50 +144,15 @@ function scheduler(): void {
 }
 
 /** «Ныряние»: 5 минут вниз, ~20 с плавно вверх, 10 с покоя. */
-function diveAt(t: number): number {
-  const cycle = t % 330;
-  if (cycle < 300) {
-    const u = cycle / 300;
-    return u * u * (3 - 2 * u);
-  }
-  if (cycle < 320) {
-    const u = (cycle - 300) / 20;
-    return 1 - u * u * (3 - 2 * u);
-  }
-  return 0;
-}
-
-/** Конверт точки Фейнмана: вспышка ~3 с, затем вода возвращается (~7 с). */
-function mirrorAt(t: number): number {
-  if (mirrorStart < 0) return 0;
-  const age = t - mirrorStart;
-  if (age > 7) {
-    mirrorStart = -1;
-    return 0;
-  }
-  const rise = Math.min(1, age / 0.8);
-  const fall = age < 4.5 ? 1 : 1 - (age - 4.5) / 2.5;
-  const env = Math.max(0, Math.min(rise, fall));
-  return env * (reducedMotion ? 0.4 : 1);
-}
-
 /** Один кадр воды. Вызывается из rAF и из «Сохранить момент». */
 function renderFrame(): void {
-  tiltCur[0] += (tiltTarget[0] - tiltCur[0]) * 0.06;
-  tiltCur[1] += (tiltTarget[1] - tiltCur[1]) * 0.06;
-  const dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
-  trails.setScale(renderer.renderScale, dpr);
   renderer.render({
     time: waterTime,
-    dive: diveAt(waterTime),
-    mirror: mirrorAt(waterTime),
-    motion: reducedMotion ? 0.5 : 1,
-    tilt: tiltCur,
-    pulse,
-    flashDigit: lastPlayedDigit,
-    flashTime: lastPlayedAt,
+    light: [0.3, 0.5, 0.9],
+    sky: [0.4, 0.7, 0.9],
+    waterDeep: [0.02, 0.06, 0.12],
+    perturb: 0.05,
   });
-  trails.render(waterTime);
 
   // уровень звука → пульс ядра π (scale 1.0–1.06) + линия воды внизу
   const level = engine.ready ? engine.getLevel() : 0;
@@ -256,7 +203,6 @@ function toggleFreeze(): void {
   if (!started) return;
   frozen = !frozen;
   engine.setFrozen(frozen);
-  trails.setFrozen(frozen);
   if (frozen) {
     pauseStartedAt = nowSec();
     hud.setFrozenLabel([...lastDigits]);
@@ -280,7 +226,9 @@ new Gestures(canvas, {
     if (!started || frozen) return;
     // нота по x (слева → ниже) + капля ровно в этой точке
     engine.playX(x);
-    ripples.add(x, y, Math.min(9, Math.max(0, Math.floor(x * 10))), waterTime, 0.85);
+    const code = Math.min(9, Math.max(0, Math.floor(x * 10)));
+    ripples.add(x, y, code, waterTime, 0.85);
+    renderer.addDrop(x, y, 0.08 + 0.85 * 0.12, 0.06 + 0.85 * 0.10);
     hud.beat();
     pulse = Math.max(pulse, 0.8);
   },
@@ -295,10 +243,7 @@ new Gestures(canvas, {
   onSpeedKey: (dir) => {
     if (!menu.isOpen) changeSpeed(dir * STORAGE_SPEED_STEP);
   },
-  onTilt: (alpha, beta) => {
-    tiltTarget[0] = Math.max(-1, Math.min(1, (alpha - 180) / 45));
-    tiltTarget[1] = Math.max(-1, Math.min(1, (beta - 45) / 45));
-  },
+  onTilt: (_alpha, _beta) => {},
 });
 
 hud.menuButton.addEventListener('click', () => menu.toggle());
@@ -306,8 +251,7 @@ hud.menuButton.addEventListener('click', () => menu.toggle());
 /** Сохранение позиции в π при уходе со страницы. */
 window.addEventListener('pagehide', () => {
   stream.flush();
-  drum.dispose();
-  trails.dispose();
+  renderer.dispose();
 });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {

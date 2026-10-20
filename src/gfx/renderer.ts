@@ -6,7 +6,9 @@
  */
 
 import fragmentSrc from './water.frag.glsl?raw';
-import { MAX_DROPS, type Ripples } from './ripples.ts';
+import { Sim } from './sim.ts';
+import { Ripples } from './ripples.ts';
+import { Floor } from './floor.ts';
 
 const vertexSrc = `#version 300 es
 layout(location = 0) in vec2 aPos;
@@ -14,20 +16,17 @@ void main() { gl_Position = vec4(aPos, 0.0, 1.0); }
 `;
 
 export interface FrameParams {
-  time: number; // часы синхронизации
-  dive: number;
-  mirror: number;
-  motion: number; // 1 | 0.5
-  tilt: [number, number];
-  pulse: number;
-  flashDigit: number; // цифра, которая только что сыграла (-1 = никакая)
-  flashTime: number; // часы момента вспышки якоря
+  time: number;
+  light: [number, number, number];
+  sky: [number, number, number];
+  waterDeep: [number, number, number];
+  perturb: number;
 }
 
 export interface RendererStats {
   fps: number;
   scale: number;
-  mode: 'webgl2' | 'canvas2d';
+  mode: 'webgl2' | 'canvas2d' | 'sim-unavailable';
 }
 
 type ResizeFn = (w: number, h: number) => void;
@@ -38,25 +37,25 @@ export class Renderer {
   private ctx2d: CanvasRenderingContext2D | null = null;
   private program: WebGLProgram | null = null;
   private uLoc: Record<string, WebGLUniformLocation | null> = {};
-  private dropData = new Float32Array(MAX_DROPS * 4);
-  private anchorData = new Float32Array(10 * 4);
   private scale = 1;
   private frameEma = 16;
   private frameCount = 0;
   private lastRenderAt = 0;
   private lost = false;
-  private ripples: Ripples;
+  private sim = new Sim();
+  private floor = new Floor({ cols: 16, rows: 200, tilePx: 64, fontPx: 30 });
+  private floorTexture: WebGLTexture | null = null;
   private onResize: ResizeFn;
   private stats: RendererStats = { fps: 60, scale: 1, mode: 'webgl2' };
 
-  constructor(canvas: HTMLCanvasElement, ripples: Ripples, onResize: ResizeFn) {
+  constructor(canvas: HTMLCanvasElement, _ripples: Ripples, onResize: ResizeFn) {
     this.canvas = canvas;
-    this.ripples = ripples;
     this.onResize = onResize;
     const reduced =
       typeof matchMedia === 'function' &&
       matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.scale = reduced ? 0.6 : 1;
+    this.floor.loadDigits(0, 16 * 200);
     this.initGL();
     this.bindContextEvents();
     this.resize();
@@ -150,21 +149,45 @@ export class Renderer {
     for (const name of [
       'uRes',
       'uTime',
-      'uDive',
-      'uMirror',
-      'uMotion',
-      'uTilt',
-      'uPulse',
-      'uDrops',
-      'uAnchors',
-      'uFlashDigit',
-      'uFlashTime',
+      'uState',
+      'uFloor',
+      'uFloorSize',
+      'uLight',
+      'uSky',
+      'uWaterDeep',
+      'uPerturb',
     ]) {
       // часть драйверов требует имя 'uDrops[0]' для uniform-массива
       this.uLoc[name] =
         gl.getUniformLocation(prog, name) ??
         gl.getUniformLocation(prog, `${name}[0]`);
     }
+
+    const dpr = Math.min(globalThis.devicePixelRatio || 1, 2);
+    const simW = Math.max(64, Math.round(this.canvas.clientWidth * dpr * 0.25));
+    const simH = Math.max(64, Math.round(this.canvas.clientHeight * dpr * 0.25));
+    if (!this.sim.init(gl, simW, simH)) {
+      this.stats.mode = 'sim-unavailable';
+    }
+
+    this.floorTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.floorTexture);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      this.floor.width,
+      this.floor.height,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      this.floor.canvas,
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
   private bindContextEvents(): void {
@@ -192,7 +215,6 @@ export class Renderer {
       this.gl?.viewport(0, 0, w, h);
       this.onResize(w, h);
     }
-    this.ripples.setViewport(w, h);
   }
 
   /** Автоподстройка: > 20 мс → −0.1, < 12 мс → +0.1 (каждые 60 кадров). */
@@ -225,6 +247,11 @@ export class Renderer {
     this.adapt(gap);
   }
 
+  /** Добавить каплю в симуляцию (вызывается из main.ts при каждой цифре). */
+  addDrop(x: number, y: number, radius: number, strength: number): void {
+    this.sim.addDrop(x, y, radius, strength);
+  }
+
   private renderGL(params: FrameParams): void {
     const gl = this.gl;
     const prog = this.program;
@@ -232,59 +259,44 @@ export class Renderer {
     gl.useProgram(prog);
     gl.uniform2f(this.uLoc.uRes!, this.canvas.width, this.canvas.height);
     gl.uniform1f(this.uLoc.uTime!, params.time);
-    gl.uniform1f(this.uLoc.uDive!, params.dive);
-    gl.uniform1f(this.uLoc.uMirror!, params.mirror);
-    gl.uniform1f(this.uLoc.uMotion!, params.motion);
-    gl.uniform2f(this.uLoc.uTilt!, params.tilt[0], params.tilt[1]);
-    gl.uniform1f(this.uLoc.uPulse!, params.pulse);
-    gl.uniform1f(this.uLoc.uFlashDigit!, params.flashDigit);
-    gl.uniform1f(this.uLoc.uFlashTime!, params.flashTime);
-    this.ripples.write(this.dropData);
-    gl.uniform4fv(this.uLoc.uDrops!, this.dropData);
-    this.ripples.writeAnchors(this.anchorData);
-    gl.uniform4fv(this.uLoc.uAnchors!, this.anchorData);
+    gl.uniform1f(this.uLoc.uPerturb!, params.perturb);
+    gl.uniform3fv(this.uLoc.uLight!, params.light);
+    gl.uniform3fv(this.uLoc.uSky!, params.sky);
+    gl.uniform3fv(this.uLoc.uWaterDeep!, params.waterDeep);
+    gl.uniform2f(this.uLoc.uFloorSize!, this.floor.textureWidth, this.floor.textureHeight);
+
+    // шаг симуляции
+    this.sim.step();
+
+    // текстуры: sim state + пол
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.sim.getStateTexture());
+    gl.uniform1i(this.uLoc.uState!, 0);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.floorTexture);
+    gl.uniform1i(this.uLoc.uFloor!, 1);
+
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.activeTexture(gl.TEXTURE0);
   }
 
   /** Запасной путь: простые кольца на Canvas 2D. */
-  private render2D(params: FrameParams): void {
+  private render2D(_params: FrameParams): void {
     const c = this.ctx2d;
     if (!c) return;
     const w = this.canvas.width;
     const h = this.canvas.height;
-    const grad = c.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, '#0A0F24');
-    grad.addColorStop(1, '#05060D');
-    c.fillStyle = grad;
+    c.fillStyle = '#0A0F24';
     c.fillRect(0, 0, w, h);
-
-    const data = this.dropData;
-    this.ripples.write(data);
-    for (let i = 0; i < MAX_DROPS; i++) {
-      const packed = data[i * 4 + 3];
-      if (packed <= 0) continue;
-      const age = params.time - data[i * 4 + 2];
-      if (age < 0) continue;
-      const x = data[i * 4] * w;
-      const y = (1 - data[i * 4 + 1]) * h;
-      const alpha = Math.exp(-age * 0.5) * 0.5 * (1 - params.mirror * 0.85);
-      const radius = Math.min(w, h) * 0.06 + age * Math.min(w, h) * 0.22;
-      c.strokeStyle = `rgba(140, 200, 255, ${Math.max(0, alpha)})`;
-      c.lineWidth = Math.max(1, h * 0.004);
-      c.beginPath();
-      c.arc(x, y, radius, 0, Math.PI * 2);
-      c.stroke();
-      c.fillStyle = `rgba(90, 150, 255, ${Math.max(0, alpha * 0.5)})`;
-      c.beginPath();
-      c.arc(x, y, Math.min(w, h) * 0.03, 0, Math.PI * 2);
-      c.fill();
-    }
   }
 
   dispose(): void {
     if (this.gl && this.program) {
       this.gl.deleteProgram(this.program);
     }
+    this.sim.dispose();
+    if (this.floorTexture) this.gl?.deleteTexture(this.floorTexture);
     this.gl = null;
     this.ctx2d = null;
   }
