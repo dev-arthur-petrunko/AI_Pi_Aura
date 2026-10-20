@@ -11,6 +11,7 @@ export class Hud {
   private counter: HTMLElement;
   private toast: HTMLElement;
   private pulse: HTMLElement;
+  private line: HTMLElement;
   private digit = 0;
   private toastTimer = 0;
 
@@ -25,12 +26,14 @@ export class Hud {
         <button class="hud-menu-dot" id="menu-dot" aria-label="" aria-haspopup="dialog">◌</button>
       </div>
       <div class="hud-toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="hud-line" id="line" aria-hidden="true"></div>
       <div class="hud-pulse" id="pulse" aria-hidden="true"></div>
     `;
     this.intro = root.querySelector('#intro') as HTMLElement;
     this.counter = root.querySelector('#counter') as HTMLElement;
     this.toast = root.querySelector('#toast') as HTMLElement;
     this.pulse = root.querySelector('#pulse') as HTMLElement;
+    this.line = root.querySelector('#line') as HTMLElement;
     this.apply();
     onLangChange(() => this.apply());
   }
@@ -102,5 +105,12 @@ export class Hud {
     }
     this.toast.textContent = `${t('gesture.freeze')}: ${digits.join(' · ')}`;
     this.toast.classList.add('is-visible');
+  }
+
+  /** Линия звука внизу: яркость и ширина повторяют уровень (0..1). */
+  setLevel(level: number): void {
+    const l = Math.min(1, Math.max(0, level));
+    this.line.style.opacity = String(0.25 + l * 0.75);
+    this.line.style.transform = `translateX(-50%) scaleX(${0.35 + l * 1.15})`;
   }
 }

@@ -24,6 +24,7 @@ export class AudioEngine {
   ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private dry: GainNode | null = null;
+  private analyser: AnalyserNode | null = null;
   private voices: ActiveVoice[] = [];
   private drone = new Drone();
   private scale: ScaleId = 'major';
@@ -74,7 +75,13 @@ export class AudioEngine {
     convolver.connect(wet);
     wet.connect(compressor);
     compressor.connect(master);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.8;
+    compressor.connect(analyser);
+    analyser.connect(master);
     master.connect(ctx.destination);
+    this.analyser = analyser;
 
     this.master = master;
     this.dry = dry;
@@ -113,6 +120,17 @@ export class AudioEngine {
 
   get currentScale(): ScaleId {
     return this.scale;
+  }
+
+  /** Уровень звука 0..1 по текущему времени (для пульса и линии воды). */
+  getLevel(): number {
+    if (!this.analyser || !this.ctx) return 0;
+    const buffer = new Float32Array(this.analyser.fftSize);
+    this.analyser.getFloatTimeDomainData(buffer);
+    let sum = 0;
+    for (let i = 0; i < buffer.length; i++) sum += buffer[i] * buffer[i];
+    const rms = Math.sqrt(sum / buffer.length);
+    return Math.min(1, rms * 3);
   }
 
   /**

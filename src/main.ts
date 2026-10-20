@@ -206,6 +206,12 @@ function renderFrame(): void {
     flashTime: lastPlayedAt,
   });
   trails.render(waterTime);
+
+  // уровень звука → пульс ядра π (scale 1.0–1.06) + линия воды внизу
+  const level = engine.ready ? engine.getLevel() : 0;
+  const scale = 1 + level * 0.06;
+  core.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  hud.setLevel(level);
 }
 
 function frame(now: number): void {

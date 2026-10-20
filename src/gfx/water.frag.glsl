@@ -145,6 +145,7 @@ void main() {
     float echoR = exp(-pow((r - radius * 1.75) * (ringWidth * 1.22), 2.0));
     float ringLife = exp(-age * 0.40);
     float rings = (ringR + 0.20 * echoR) * weight * damp * ringLife * ringGain;
+    if (rings < 0.03) rings = 0.0; // едва заметные кольца не рисуем
     // максимум вместо суммы: перекрытые кольца остаются тонкими линиями
     ringMax = max(ringMax, rings);
     ringWeightSum += rings;

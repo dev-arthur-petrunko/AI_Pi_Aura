@@ -153,6 +153,21 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+.hud-line {
+  position: absolute;
+  left: 50%;
+  bottom: max(64px, env(safe-area-inset-bottom) + 16px);
+  width: 72px;
+  height: 1px;
+  transform: translateX(-50%) scaleX(0.35);
+  transform-origin: left center;
+  background: linear-gradient(90deg, transparent, rgba(150, 210, 255, 0.85), transparent);
+  opacity: 0.25;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 0 14px rgba(150, 210, 255, 0.35);
+}
+
 .hud-menu-dot {
   position: absolute;
   right: 18px;
