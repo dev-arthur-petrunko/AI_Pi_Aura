@@ -20,5 +20,11 @@
   "save.caption": "π · цифра {n}",
   "menu.pause": "Пауза",
   "menu.resume": "Далі",
-  "gesture.freeze": "Останні 10 цифр"
+  "gesture.freeze": "Останні 10 цифр",
+  "note.C": "До",
+  "note.D": "Ре",
+  "note.E": "Мі",
+  "note.G": "Соль",
+  "note.A": "Ля",
+  "drum.number": "№ {n}"
 }

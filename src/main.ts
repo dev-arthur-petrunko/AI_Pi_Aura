@@ -9,6 +9,7 @@ import { AudioEngine } from './audio/engine.ts';
 import { Ripples, hashPos } from './gfx/ripples.ts';
 import { Renderer } from './gfx/renderer.ts';
 import { Trails } from './gfx/trails.ts';
+import { Drum } from './ui/drum.ts';
 import { formatNum, getLang, initLang, onLangChange } from './i18n/index.ts';
 import { FeynmanDetector } from './pi/feynman.ts';
 import { PiStream } from './pi/piStream.ts';
@@ -36,6 +37,7 @@ const ripples = new Ripples();
 const renderer = new Renderer(canvas, ripples, () => undefined);
 const trails = new Trails();
 canvas.parentNode?.insertBefore(trails.container, canvas.nextSibling);
+const drum = new Drum(app);
 const engine = new AudioEngine();
 const hud = new Hud(app);
 const stream = new PiStream();
@@ -121,6 +123,7 @@ function scheduleDigit(whenAudioOrSec: number): boolean {
   const birth = waterTime + delay;
   ripples.addAtIndex(index, digit, birth, 0.7);
   trails.onDigit(digit, birth);
+  drum.update(digit, index, stream.peek(3));
   lastPlayedDigit = digit;
   lastPlayedAt = birth;
 
@@ -295,7 +298,11 @@ new Gestures(canvas, {
 hud.menuButton.addEventListener('click', () => menu.toggle());
 
 /** Сохранение позиции в π при уходе со страницы. */
-window.addEventListener('pagehide', () => stream.flush());
+window.addEventListener('pagehide', () => {
+  stream.flush();
+  drum.dispose();
+  trails.dispose();
+});
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
     stream.flush();

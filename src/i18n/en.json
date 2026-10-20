@@ -20,5 +20,11 @@
   "save.caption": "π · digit {n}",
   "menu.pause": "Pause",
   "menu.resume": "Resume",
-  "gesture.freeze": "Last 10 digits"
+  "gesture.freeze": "Last 10 digits",
+  "note.C": "C",
+  "note.D": "D",
+  "note.E": "E",
+  "note.G": "G",
+  "note.A": "A",
+  "drum.number": "№ {n}"
 }
