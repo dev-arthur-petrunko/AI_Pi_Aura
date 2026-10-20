@@ -1,0 +1,120 @@
+<!doctype html><html lang="uk" data-theme="day"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>π · Aura</title><style>
+:root{--ink:#0B3C5D;--dim:rgba(11,60,93,.6);--glass:rgba(255,255,255,.34);--gb:rgba(255,255,255,.7);--bar:#1B8FB3;--ease:cubic-bezier(.22,1,.36,1)}
+:root[data-theme=night]{--ink:rgba(255,255,255,.92);--dim:rgba(255,255,255,.58);--glass:rgba(255,255,255,.07);--gb:rgba(255,255,255,.16);--bar:#7FF0FF}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#7fd0df;color:var(--ink);font-family:-apple-system,"SF Pro Display","Segoe UI",system-ui,sans-serif}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#p{position:fixed;left:max(20px,env(safe-area-inset-left));top:max(20px,env(safe-area-inset-top));bottom:max(20px,env(safe-area-inset-bottom));width:324px;padding:26px 24px 18px;display:flex;flex-direction:column;gap:20px;background:var(--glass);border:1px solid var(--gb);border-radius:28px;backdrop-filter:blur(26px) saturate(170%);-webkit-backdrop-filter:blur(26px) saturate(170%);box-shadow:0 20px 60px rgba(5,60,90,.18)}
+h1{margin:0;font-weight:300;font-size:30px;letter-spacing:.01em}
+#sub,#cnt,#fey,.cap{font-size:13px;color:var(--dim);letter-spacing:.03em}#sub{margin:3px 0 0}
+#big{font-size:112px;font-weight:200;line-height:1;font-variant-numeric:tabular-nums}
+#big.pop{animation:pop .6s var(--ease)}@keyframes pop{from{opacity:0;transform:translateY(16px) scale(.96);filter:blur(6px)}}
+#note{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:15px;color:var(--dim)}#dot{width:9px;height:9px;border-radius:50%;background:var(--bar)}
+#rib{display:flex;justify-content:center;align-items:baseline;white-space:nowrap;font-size:19px;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:.05em;min-height:30px}
+#rib .c{font-size:28px;font-weight:500;margin:0 2px}#rib .g{margin-left:.55em}#rib b{font-weight:300;margin:0 1px}
+#hist{display:flex;gap:6px;align-items:flex-end;height:66px;margin-top:8px}.hc{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px;font-size:10px;color:var(--dim);font-variant-numeric:tabular-nums}
+.hc i{width:100%;border-radius:6px 6px 3px 3px;background:linear-gradient(var(--bar),transparent);min-height:4px;transition:height .9s var(--ease)}
+#fey{min-height:34px}#foot{margin-top:auto;display:flex;gap:10px;align-items:center}
+button{all:unset;cursor:pointer;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid var(--gb);background:rgba(255,255,255,.18);font-size:11px;font-weight:600;color:var(--ink)}
+button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}button svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#ver{margin-left:auto;font-size:11px;color:var(--dim)}
+#in{position:fixed;left:calc(50% + 172px);top:50%;transform:translate(-50%,-50%);padding:14px 24px;border-radius:999px;background:var(--glass);border:1px solid var(--gb);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font-size:15px;letter-spacing:.02em;transition:opacity 1s;pointer-events:none}
+@media(max-width:899px){#p{left:12px;right:12px;top:max(12px,env(safe-area-inset-top));bottom:auto;width:auto;padding:14px 18px;gap:8px;border-radius:24px}#big{font-size:54px}#hist,#fey,#sub,.cap{display:none}#foot{margin-top:2px}#in{left:50%}}
+</style></head><body>
+<canvas id="c"></canvas>
+<aside id="p"><div><h1>π · Aura</h1><p id="sub"></p></div>
+<div><div id="big">π</div><div id="note"><i id="dot"></i><span id="nn"></span></div></div>
+<div id="rib"></div><div id="cnt"></div>
+<div><div class="cap" id="ht"></div><div id="hist"></div></div><div id="fey"></div>
+<div id="foot"><button id="th"></button><button id="sd"></button><button id="lg"></button><span id="ver">v2 · prototype</span></div></aside>
+<div id="in"></div>
+<script>
+(()=>{
+const $=i=>document.getElementById(i),ls={g:k=>{try{return localStorage.getItem(k)}catch(e){return null}},s:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+const L={uk:{sub:'Нескінченна мелодія води',of:'цифра {n} з ∞',fey:'До точки Фейнмана: {n}',feyd:'6 дев’яток поспіль. π теж уміє дивувати',touch:'Торкнись, щоб почути нескінченність',ht:'Які цифри вже випали',nt:['До','Ре','Мі','Соль','Ля'],th:'Тема',sd:'Звук',nf:'Потрібен WebGL2 з float-текстурами'},
+en:{sub:'The endless melody of water',of:'digit {n} of ∞',fey:'{n} digits to the Feynman point',feyd:'Six nines in a row. π can be surprising too',touch:'Touch to hear infinity',ht:'Which digits have appeared',nt:['C','D','E','G','A'],th:'Theme',sd:'Sound',nf:'WebGL2 with float textures is required'}};
+let lang=ls.g('pi.lang')||(/^uk/i.test(navigator.language||'')?'uk':'en'),theme=ls.g('pi.theme')==='night'?'night':'day';
+const tr=k=>L[lang][k],fmt=n=>new Intl.NumberFormat(lang).format(n);
+function*gen(){let q=1n,r=0n,t=1n,k=1n,n=3n,l=3n;for(;;){if(4n*q+r-t<n*t){yield Number(n);const nr=10n*(r-n*t);n=10n*(3n*q+r)/t-10n*n;q*=10n;r=nr}else{const nr=(2n*q+r)*l,nn=(q*7n*k+2n+r*l)/(t*l);q*=k;t*=l;l+=2n;k++;n=nn;r=nr}}}
+const D=[],G=gen(),dg=i=>{while(D.length<=i)D.push(G.next().value);return D[i]};
+const cv=$('c'),gl=cv.getContext('webgl2',{antialias:false,alpha:false});
+if(!gl||!gl.getExtension('EXT_color_buffer_float')){$('in').textContent=tr('nf');return}
+const lin=!!gl.getExtension('OES_texture_float_linear'),IF=lin?gl.RGBA32F:gl.RGBA16F,TY=lin?gl.FLOAT:gl.HALF_FLOAT;
+const VS='#version 300 es\nout vec2 v;void main(){vec2 p=vec2((gl_VertexID<<1)&2,gl_VertexID&2);v=p;gl_Position=vec4(p*2.-1.,0,1);}';
+const H='#version 300 es\nprecision highp float;in vec2 v;out vec4 o;uniform sampler2D S;';
+function mk(fs){const p=gl.createProgram();for(const[ty,s]of[[gl.VERTEX_SHADER,VS],[gl.FRAGMENT_SHADER,fs]]){const h=gl.createShader(ty);gl.shaderSource(h,s);gl.compileShader(h);if(!gl.getShaderParameter(h,gl.COMPILE_STATUS))console.error(gl.getShaderInfoLog(h));gl.attachShader(p,h)}gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))console.error(gl.getProgramInfoLog(p));const u={};return{p,u:n=>u[n]||(u[n]=gl.getUniformLocation(p,n))}}
+const PS=mk(H+`uniform vec2 T;void main(){vec4 s=texture(S,v);float r=texture(S,v+vec2(T.x,0)).r,l=texture(S,v-vec2(T.x,0)).r,u=texture(S,v+vec2(0,T.y)).r,d=texture(S,v-vec2(0,T.y)).r;
+s.g+=((r+l+u+d)*.25-s.r)*2.;s.g*=.996;s.r+=s.g;vec3 dx=vec3(T.x,r-s.r,0),dy=vec3(0,u-s.r,T.y);s.ba=normalize(cross(dy,dx)).xz;o=s;}`);
+const PD=mk(H+`uniform vec2 C;uniform float R,K,A;void main(){vec4 s=texture(S,v);vec2 q=v-C;q.x*=A;float d=max(0.,1.-length(q)/R);d=.5-cos(d*3.14159265)*.5;s.r+=d*K;o=s;}`);
+const PR=mk(H+`uniform sampler2D F;uniform vec2 res,ct;uniform float t,sc,day,fl;uniform vec3 fc;
+float cs(vec2 p){float a=0.;for(int i=0;i<2;i++){p+=vec2(sin(p.y*1.7+t*.55+float(i)*2.),cos(p.x*1.3-t*.45+float(i)))*.5;a+=pow(1.-abs(sin(p.x*3.+sin(p.y*2.+t*.4))*sin(p.y*3.+cos(p.x*2.-t*.3))),7.);}return a*.5;}
+void main(){vec4 s=texture(S,v);vec3 N=vec3(s.b,sqrt(max(0.,1.-dot(s.ba,s.ba))),s.a);vec2 uv=v+s.ba*.035;
+float z=max(res.y/9.,res.x/16.);vec2 tp=vec2((uv.x-.5)*res.x/z+8.,(1.-uv.y)*res.y/z+4.5-.42*res.y/z+sc);
+vec3 c=texture(F,tp/vec2(16.,12.)).rgb;c+=fc*exp(-dot(tp-ct,tp-ct)*1.3)*fl*1.1;
+float cc=cs(vec2(uv.x*res.x/res.y,uv.y)*3.2)*(.5+2.5*length(s.ba));c+=mix(vec3(.3,.8,.95),vec3(1.),day)*cc*.3;
+vec3 deep=mix(vec3(.01,.10,.16),vec3(.07,.50,.66),day);float dep=smoothstep(.15,.95,length((v-.5)*vec2(1.,.8))*1.5);c=mix(c,deep,dep*.5);
+vec3 Ld=normalize(vec3(-.4,.8,.5));float sp=pow(max(dot(reflect(-Ld,N),vec3(0,1,0)),0.),70.);float fr=pow(1.-N.y,1.6);
+c=mix(c,mix(vec3(.25,.6,.75),vec3(.93,.99,1.),day),fr*.55)+sp*.9;c*=1.-.44*dot(v-.5,v-.5);o=vec4(c,1);}`);
+let SW,SH,tex=[],fb=[],cur=0;
+function initSim(){SH=180;SW=Math.round(Math.min(480,Math.max(180,SH*innerWidth/innerHeight)));cur=0;for(let k=0;k<2;k++){if(tex[k]){gl.deleteTexture(tex[k]);gl.deleteFramebuffer(fb[k])}const x=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,x);gl.texImage2D(gl.TEXTURE_2D,0,IF,SW,SH,0,gl.RGBA,TY,null);
+for(const[a,b]of[[gl.TEXTURE_MIN_FILTER,lin?gl.LINEAR:gl.NEAREST],[gl.TEXTURE_MAG_FILTER,lin?gl.LINEAR:gl.NEAREST],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,a,b);
+const f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,x,0);tex[k]=x;fb[k]=f}}
+function pass(P,su){gl.useProgram(P.p);gl.bindFramebuffer(gl.FRAMEBUFFER,fb[1-cur]);gl.viewport(0,0,SW,SH);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex[cur]);gl.uniform1i(P.u('S'),0);su&&su();gl.drawArrays(gl.TRIANGLES,0,3);cur=1-cur}
+const step=()=>pass(PS,()=>gl.uniform2f(PS.u('T'),1/SW,1/SH));
+const drop=(x,y,R,K)=>pass(PD,()=>{gl.uniform2f(PD.u('C'),x,y);gl.uniform1f(PD.u('R'),R);gl.uniform1f(PD.u('K'),K);gl.uniform1f(PD.u('A'),SW/SH)});
+// floor: tiles with the digits of pi
+const TS=80,FC=16,FR=12,fcv=document.createElement('canvas');fcv.width=FC*TS;fcv.height=FR*TS;const fx=fcv.getContext('2d');
+const ft=gl.createTexture();let idx=0,nxt=0,started=false,lb=-1e9,STEP=1400;
+const PAL=['#2B6CB0','#2F8FD0','#1FB0D8','#19C7C7','#3ED6B0','#7FE3B8','#B4EBD6','#C9C3F0','#E6B9E8','#F7D6E6'],hx=h=>[1,3,5].map(k=>parseInt(h.substr(k,2),16)/255);
+function drawFloor(){const day=theme==='day',r0=Math.floor(idx/FC)-4;fx.fillStyle=day?'#5FB5C9':'#04141F';fx.fillRect(0,0,fcv.width,fcv.height);fx.textAlign='center';fx.textBaseline='middle';fx.font='200 44px -apple-system,"Segoe UI",system-ui,sans-serif';
+for(let r=0;r<FR;r++)for(let c=0;c<FC;c++){const k=(r0+r)*FC+c,x=c*TS,y=r*TS,hv=Math.abs(Math.sin(k*12.9898)*43758.5453)%1;
+fx.fillStyle=day?`hsl(190 ${55+hv*10}% ${61+hv*5}%)`:`hsl(200 55% ${9+hv*3}%)`;fx.fillRect(x+2,y+2,TS-4,TS-4);
+if(k>=0){const a=k<idx?.34:k===idx?1:.2;fx.fillStyle=day?`rgba(6,60,95,${a})`:`rgba(170,240,255,${a})`;fx.fillText(String(dg(k)),x+TS/2,y+TS/2+2)}}
+gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,ft);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,fcv);
+for(const[a,b]of[[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]])gl.texParameteri(gl.TEXTURE_2D,a,b)}
+// audio: pentatonic bell + drone + generated reverb
+let ac,bus,mg,muted=false;const F=[261.63,293.66,329.63,392,440,523.25,587.33,659.25,783.99,880];
+function startAudio(){const A=window.AudioContext||window.webkitAudioContext;if(!A)return;ac=new A();const comp=ac.createDynamicsCompressor(),rv=ac.createConvolver(),wet=ac.createGain(),n=ac.sampleRate*4,b=ac.createBuffer(2,n,ac.sampleRate);
+for(let c=0;c<2;c++){const d=b.getChannelData(c);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3)}
+rv.buffer=b;wet.gain.value=.55;mg=ac.createGain();mg.gain.value=.7;bus=ac.createGain();bus.connect(comp);bus.connect(rv);rv.connect(wet);wet.connect(comp);comp.connect(mg);mg.connect(ac.destination);
+const o=ac.createOscillator(),g=ac.createGain(),lf=ac.createOscillator(),lg=ac.createGain();o.frequency.value=65.41;g.gain.value=.05;lf.frequency.value=1/12;lg.gain.value=.025;lf.connect(lg);lg.connect(g.gain);o.connect(g);g.connect(bus);o.start();lf.start()}
+function note(d,vel){if(!ac)return;const T0=ac.currentTime;for(const[ty,de,gv]of[['sine',-6,1],['triangle',6,.5]]){const o=ac.createOscillator(),g=ac.createGain();o.type=ty;o.frequency.value=F[d];o.detune.value=de;g.gain.setValueAtTime(0,T0);g.gain.linearRampToValueAtTime(.2*vel*gv,T0+.025);g.gain.exponentialRampToValueAtTime(.0001,T0+3.2);o.connect(g);g.connect(bus);o.start(T0);o.stop(T0+3.3);o.onended=()=>g.disconnect()}}
+// ui
+const cn=Array(10).fill(0);
+function ribbon(){let h='';for(let k=Math.max(0,idx-9);k<=idx+12;k++){const j=k-idx,st=j<0?`opacity:${Math.max(.15,.62+j*.05).toFixed(2)}`:j===0?'':`opacity:${(.55/Math.pow(j,.8)).toFixed(2)};filter:blur(${Math.min(3,j*.3).toFixed(1)}px)`;
+h+=(k===1?`<b>${lang==='uk'?',':'.'}</b>`:'')+`<span class="${j===0?'c':''}${k>1&&(k-1)%5===0?' g':''}" style="${st}">${dg(k)}</span>`}$('rib').innerHTML=h}
+function hist(){const m=Math.max(1,...cn);document.querySelectorAll('.hc i').forEach((e,i)=>e.style.height=(4+46*cn[i]/m)+'px')}
+function ui(d){const b=$('big');b.textContent=d;b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');$('dot').style.background=PAL[d];$('nn').textContent=tr('nt')[d%5]+(d>4?' ↑':'');
+$('cnt').textContent=tr('of').replace('{n}',fmt(idx+1));ribbon();hist();$('fey').textContent=idx<762?tr('fey').replace('{n}',fmt(762-idx)):idx<768?tr('feyd'):''}
+function lng(){document.documentElement.lang=lang;$('sub').textContent=tr('sub');$('ht').textContent=tr('ht');$('lg').textContent=lang==='uk'?'УКР':'ENG';$('th').setAttribute('aria-label',tr('th'));$('sd').setAttribute('aria-label',tr('sd'));if(!started)$('in').textContent=tr('touch');else ui(dg(idx))}
+const SUN='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg>',MOON='<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>',SND='<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 010 7"/></svg>';
+function thm(){document.documentElement.dataset.theme=theme;$('th').innerHTML=theme==='day'?MOON:SUN;drawFloor()}
+// beat + input
+function play(d){const pl=innerWidth>=900?344/innerWidth:0,x=pl+(1-pl)*(.1+.8*d/9),y=.5+.17*Math.sin(idx*.7)+.08*Math.sin(idx*1.9),rep=idx>0&&dg(idx-1)===d;
+drop(x,y,.075-.045*d/9,(.026-.012*d/9)*(rep?1.8:1));note(d,rep?1.3:1)}
+function beat(){idx=nxt++;const d=dg(idx);cn[d]++;play(d);drawFloor();ui(d)}
+function start(){started=true;startAudio();if(ac&&ac.resume)ac.resume();$('in').style.opacity=0;lb=performance.now();beat()}
+let lm=0;const pt=e=>[e.clientX/innerWidth,1-e.clientY/innerHeight];
+cv.addEventListener('pointerdown',e=>{if(!started){start();return}const[x,y]=pt(e);drop(x,y,.06,.03);note(Math.min(9,Math.floor(x*10)),.8)});
+cv.addEventListener('pointermove',e=>{const n=performance.now();if(n-lm<40)return;lm=n;const[x,y]=pt(e);drop(x,y,.022,.005)});
+$('th').onclick=()=>{theme=theme==='day'?'night':'day';ls.s('pi.theme',theme);thm()};
+$('lg').onclick=()=>{lang=lang==='uk'?'en':'uk';ls.s('pi.lang',lang);lng()};
+$('sd').onclick=()=>{muted=!muted;$('sd').style.opacity=muted?.45:1;if(mg)mg.gain.setTargetAtTime(muted?0:.7,ac.currentTime,.05)};
+document.addEventListener('visibilitychange',()=>{if(ac)document.hidden?ac.suspend():ac.resume()});
+$('hist').innerHTML=Array.from({length:10},(_,i)=>`<div class="hc"><i style="height:4px"></i>${i}</div>`).join('');$('sd').innerHTML=SND;
+function size(){const r=Math.min(devicePixelRatio||1,1.5),k=Math.min(1,Math.sqrt(2.6e6/(innerWidth*innerHeight*r*r)));cv.width=Math.round(innerWidth*r*k);cv.height=Math.round(innerHeight*r*k);initSim()}
+let rt;addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(size,200)});
+size();lng();thm();let dayU=theme==='day'?1:0,li=0;
+function frame(now){if(started&&now-lb>=STEP){lb=now;beat()}
+if(!started&&now-li>2600){li=now;drop(.4+Math.random()*.55,.3+Math.random()*.4,.05,.02)}
+step();step();dayU+=((theme==='day'?1:0)-dayU)*.06;
+gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,cv.width,cv.height);gl.useProgram(PR.p);
+gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex[cur]);gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,ft);
+gl.uniform1i(PR.u('S'),0);gl.uniform1i(PR.u('F'),1);gl.uniform2f(PR.u('res'),cv.width,cv.height);gl.uniform1f(PR.u('t'),now/1000);
+const ph=started?Math.min(1,(now-lb)/STEP):0;gl.uniform1f(PR.u('sc'),(idx+ph)/FC-Math.floor(idx/FC));gl.uniform1f(PR.u('day'),dayU);
+gl.uniform1f(PR.u('fl'),started?Math.exp(-(now-lb)/700):0);gl.uniform3fv(PR.u('fc'),hx(PAL[dg(idx)]));gl.uniform2f(PR.u('ct'),idx%FC+.5,4.5);
+gl.drawArrays(gl.TRIANGLES,0,3);requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+})();
+</script></body></html>
