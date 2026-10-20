@@ -44,6 +44,8 @@ let waterTime = 0; // часы воды (секунды)
 let clockOffset = 0; // непрерывность часов после создания AudioContext
 let nextAt = 0; // план следующей ноты в часах воды
 let lastFrame = performance.now();
+let tiltTarget: [number, number] = [0, 0];
+let tiltCur: [number, number] = [0, 0];
 let pulse = 0;
 const lastDigits: number[] = [];
 let pauseStartedAt = 0;
@@ -149,9 +151,17 @@ function scheduler(): void {
 /** «Ныряние»: 5 минут вниз, ~20 с плавно вверх, 10 с покоя. */
 /** Один кадр воды. Вызывается из rAF и из «Сохранить момент». */
 function renderFrame(): void {
+  tiltCur[0] += (tiltTarget[0] - tiltCur[0]) * 0.06;
+  tiltCur[1] += (tiltTarget[1] - tiltCur[1]) * 0.06;
+  // направление света реагирует на наклон телефона
+  const light: [number, number, number] = [
+    0.3 + tiltCur[0] * 0.4,
+    0.5 + tiltCur[1] * 0.4,
+    0.9,
+  ];
   renderer.render({
     time: waterTime,
-    light: [0.3, 0.5, 0.9],
+    light,
     sky: [0.4, 0.7, 0.9],
     waterDeep: [0.02, 0.06, 0.12],
     perturb: 0.05,
@@ -246,7 +256,10 @@ new Gestures(canvas, {
   onSpeedKey: (dir) => {
     if (!menu.isOpen) changeSpeed(dir * STORAGE_SPEED_STEP);
   },
-  onTilt: (_alpha, _beta) => {},
+  onTilt: (alpha, beta) => {
+    tiltTarget[0] = Math.max(-1, Math.min(1, (alpha - 180) / 45));
+    tiltTarget[1] = Math.max(-1, Math.min(1, (beta - 45) / 45));
+  },
 });
 
 hud.menuButton.addEventListener('click', () => menu.toggle());
