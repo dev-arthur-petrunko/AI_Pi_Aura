@@ -38,6 +38,8 @@ export class PiStream {
   private worker: Worker | null = null;
   private waiters: DigitsListener[] = [];
   private savedUpTo = 0;
+  /** Сколько цифр надо пропустить в основном потоке (запасной путь). */
+  private skipLeft = 0;
 
   constructor(startIndex = PiStream.loadIndex()) {
     this.consumed = startIndex;
@@ -80,15 +82,20 @@ export class PiStream {
         // воркер сломался — переходим на основной поток
         this.worker?.terminate();
         this.worker = null;
-        this.generator = piDigits();
-        this.pumpMain();
+        this.useMainThread(from);
       };
       this.worker.postMessage({ type: 'start', from });
     } catch {
       this.worker = null;
-      this.generator = piDigits();
-      this.pumpMain();
+      this.useMainThread(from);
     }
+  }
+
+  /** Запасной путь: генерация в основном потоке, с пропуском до `from`. */
+  private useMainThread(from: number): void {
+    this.generator = piDigits();
+    this.skipLeft = from;
+    this.pumpMain();
   }
 
   private requestMore(): void {
@@ -102,6 +109,15 @@ export class PiStream {
   /** Запасной путь: генерация в основном потоке. */
   private pumpMain(): void {
     if (!this.generator) this.generator = piDigits();
+    // сперва пропускаем цифры до сохранённой позиции
+    while (this.skipLeft > 0) {
+      const r = this.generator.next();
+      if (r.done) {
+        this.skipLeft = 0;
+        break;
+      }
+      this.skipLeft--;
+    }
     let made = 0;
     while (made < BATCH) {
       const r = this.generator.next();
@@ -159,12 +175,12 @@ export class PiStream {
     this.buffer = [];
     this.consumed = 0;
     this.savedUpTo = 0;
+    this.skipLeft = 0;
     PiStream.resetIndex();
     if (this.worker) {
       this.worker.postMessage({ type: 'start', from: 0 });
     } else {
-      this.generator = piDigits();
-      this.pumpMain();
+      this.useMainThread(0);
     }
   }
 

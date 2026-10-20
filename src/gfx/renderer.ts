@@ -40,6 +40,7 @@ export class Renderer {
   private scale = 1;
   private frameEma = 16;
   private frameCount = 0;
+  private lastRenderAt = 0;
   private lost = false;
   private ripples: Ripples;
   private onResize: ResizeFn;
@@ -111,7 +112,12 @@ export class Renderer {
       return;
     }
     const prog = gl.createProgram();
-    if (!prog) return;
+    if (!prog) {
+      this.gl = null;
+      this.ctx2d = this.canvas.getContext('2d');
+      this.stats.mode = 'canvas2d';
+      return;
+    }
     gl.attachShader(prog, vs);
     gl.attachShader(prog, fs);
     gl.linkProgram(prog);
@@ -196,9 +202,12 @@ export class Renderer {
   }
 
   render(params: FrameParams): void {
-    const t0 = performance.now();
+    const now = performance.now();
+    // первый кадр — базовые 16 мс; дальше — реальный интервал между кадрами (вкл. ожидание GPU)
+    const gap = this.lastRenderAt === 0 ? 16 : Math.min(250, now - this.lastRenderAt);
+    this.lastRenderAt = now;
     if (this.lost || (this.gl === null && this.ctx2d === null)) {
-      this.adapt(performance.now() - t0);
+      this.adapt(gap);
       return;
     }
     if (this.gl && this.program && !this.gl.isContextLost()) {
@@ -206,7 +215,7 @@ export class Renderer {
     } else if (this.ctx2d) {
       this.render2D(params);
     }
-    this.adapt(performance.now() - t0);
+    this.adapt(gap);
   }
 
   private renderGL(params: FrameParams): void {

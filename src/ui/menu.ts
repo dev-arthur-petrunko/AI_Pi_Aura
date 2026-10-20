@@ -268,6 +268,8 @@ export class Menu {
     restart?.addEventListener('click', () => {
       if (restart.classList.contains('is-confirming')) {
         clearTimeout(this.confirmTimer);
+        restart.classList.remove('is-confirming');
+        restart.textContent = t('menu.restart');
         this.actions.onRestart();
       } else {
         restart.classList.add('is-confirming');
@@ -283,6 +285,7 @@ export class Menu {
   /** Обновить подпись скорости (напр. свайпом). */
   setSpeedUi(v: number): void {
     this.state.speed = v;
+    storeSet(STORE.speed, String(v)); // сохраняем и свайп/клавиши, не только ползунок
     const label = this.sheet.querySelector<HTMLElement>('#speed-val');
     if (label) label.textContent = speedLabel(v);
     const input = this.sheet.querySelector<HTMLInputElement>('#speed');

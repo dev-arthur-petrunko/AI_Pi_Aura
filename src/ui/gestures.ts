@@ -133,6 +133,8 @@ export class Gestures {
     }
     switch (e.key) {
       case ' ':
+        // пробел на кнопке — это activation кнопки, не пауза
+        if (target && target.tagName === 'BUTTON') break;
         e.preventDefault();
         this.cbs.onFreeze();
         break;

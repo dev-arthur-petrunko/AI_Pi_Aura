@@ -36,7 +36,7 @@ export function playNote(
   out.gain.exponentialRampToValueAtTime(0.0001, when + attack + decay);
   out.connect(destination);
 
-  const oscs: OscillatorNode[] = [];
+  const parts: { o: OscillatorNode; g: GainNode }[] = [];
   const make = (type: OscillatorType, cents: number, mul = 1) => {
     const o = ctx.createOscillator();
     o.type = type;
@@ -48,7 +48,7 @@ export function playNote(
     g.connect(out);
     o.start(when);
     o.stop(when + attack + decay + 0.1);
-    oscs.push(o);
+    parts.push({ o, g });
     return o;
   };
 
@@ -58,6 +58,25 @@ export function playNote(
   if (opts.octave) make('sine', detune, 2);
 
   let stopped = false;
+  /** Когда все осцилляторы кончились — отключаем и выходной gain (нет утечек). */
+  let remaining = parts.length;
+  const release = (): void => {
+    try {
+      out.disconnect();
+    } catch {
+      /* уже отключён */
+    }
+  };
+  const onOscEnded = (o: OscillatorNode, g?: GainNode): void => {
+    try {
+      o.disconnect();
+    } catch {
+      /* уже отключён */
+    }
+    g?.disconnect();
+    if (--remaining <= 0) release();
+  };
+
   const stop = (fade = 0.08) => {
     if (stopped) return;
     stopped = true;
@@ -66,15 +85,9 @@ export function playNote(
       out.gain.cancelScheduledValues(now);
       out.gain.setValueAtTime(Math.max(out.gain.value, 0.0001), now);
       out.gain.exponentialRampToValueAtTime(0.0001, now + fade);
-      for (const o of oscs) {
-        o.stop(now + fade + 0.02);
-        o.onended = () => {
-          try {
-            o.disconnect();
-          } catch {
-            /* уже отключён */
-          }
-        };
+      for (const p of parts) {
+        p.o.stop(now + fade + 0.02);
+        p.o.onended = () => onOscEnded(p.o, p.g);
       }
       setTimeout(() => {
         try {
@@ -88,14 +101,8 @@ export function playNote(
     }
   };
 
-  for (const o of oscs) {
-    o.onended = () => {
-      try {
-        o.disconnect();
-      } catch {
-        /* уже отключён */
-      }
-    };
+  for (const p of parts) {
+    p.o.onended = () => onOscEnded(p.o, p.g);
   }
 
   return { stop };

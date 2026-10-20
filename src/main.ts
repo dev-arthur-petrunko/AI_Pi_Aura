@@ -73,10 +73,12 @@ const menu = new Menu(app, state, {
     speed = s;
   },
   onSave: () => {
-    void saveMoment(canvas, renderFrame, stream.index);
+    // stream.index — уже «сколько цифр сыграно», как в счётчике HUD
+    void saveMoment(canvas, renderFrame, Math.max(0, stream.index - 1));
     menu.close();
   },
   onRestart: () => {
+    if (frozen) toggleFreeze(); // иначе сдвиг паузы «съест» новый план
     stream.reset();
     detector.reset();
     lastDigits.length = 0;
@@ -97,14 +99,11 @@ onLangChange(() => {
   if (stream.index > 0) hud.setDigit(stream.index - 1);
 });
 
-/** Цифра из потока → нота + капля + счётчик + детектор Фейнмана. */
-function scheduleDigit(whenAudioOrSec: number): void {
+/** Цифра из потока → нота + капля + счётчик + детектор Фейнмана. false — буфер пуст. */
+function scheduleDigit(whenAudioOrSec: number): boolean {
   const item = stream.take();
   if (!item) {
-    // буфер пуст — пробуем чуть позже
-    nextAt = nowSec() + 0.1;
-    stream.onDigits(() => undefined);
-    return;
+    return false;
   }
   const { digit, index } = item;
   lastDigits.push(digit);
@@ -129,16 +128,24 @@ function scheduleDigit(whenAudioOrSec: number): void {
     mirrorStart = waterTime;
     hud.flash('feynman', undefined, 6000);
   }
+  return true;
 }
 
 /** План: ноты по расписанию с небольшим упреждением (пилот-синхронизация). */
 function scheduler(): void {
   if (!started || frozen) return;
   const now = nowSec();
+  // возврат из фона/заморозки: план отстал — не «догоняем» ускоренным потоком
+  if (now - nextAt > BASE_INTERVAL) nextAt = now + 0.2;
   let guard = 0;
   while (nextAt <= now + LOOKAHEAD && guard++ < 4) {
-    scheduleDigit(nextAt);
-    nextAt += BASE_INTERVAL / speed;
+    if (scheduleDigit(nextAt)) {
+      nextAt += BASE_INTERVAL / speed;
+    } else {
+      // буфер пуст — пробуем чуть позже, без пропуска такта
+      nextAt = now + 0.1;
+      break;
+    }
   }
 }
 
@@ -253,11 +260,17 @@ new Gestures(canvas, {
     hud.beat();
     pulse = Math.max(pulse, 0.8);
   },
-  onSwipe: (up) => changeSpeed(up ? STORAGE_SPEED_STEP : -STORAGE_SPEED_STEP),
-  onFreeze: toggleFreeze,
+  onSwipe: (up) => {
+    if (!menu.isOpen) changeSpeed(up ? STORAGE_SPEED_STEP : -STORAGE_SPEED_STEP);
+  },
+  onFreeze: () => {
+    if (!menu.isOpen) toggleFreeze();
+  },
   onMenuToggle: () => menu.toggle(),
   onClose: () => menu.close(),
-  onSpeedKey: (dir) => changeSpeed(dir * STORAGE_SPEED_STEP),
+  onSpeedKey: (dir) => {
+    if (!menu.isOpen) changeSpeed(dir * STORAGE_SPEED_STEP);
+  },
   onTilt: (alpha, beta) => {
     tiltTarget[0] = Math.max(-1, Math.min(1, (alpha - 180) / 45));
     tiltTarget[1] = Math.max(-1, Math.min(1, (beta - 45) / 45));

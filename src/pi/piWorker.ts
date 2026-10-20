@@ -7,10 +7,10 @@ import { piDigits } from './spigot.ts';
 
 const BATCH_SIZE = 64;
 
-const gen = piDigits();
+let gen = piDigits();
 let skipped = 0;
 let skipTarget = 0;
-let running = false;
+let pending = false;
 
 function nextBatch(): number[] {
   const batch: number[] = [];
@@ -26,27 +26,26 @@ function nextBatch(): number[] {
   return batch;
 }
 
-function pump() {
-  if (!running) return;
+/** Отдаёт ровно одну пачку — воркер производит только по запросу (без раздувания буфера). */
+function sendBatch(): void {
+  if (pending) return;
+  pending = true;
   const batch = nextBatch();
+  pending = false;
   if (batch.length > 0) {
     (self as unknown as Worker).postMessage({ type: 'digits', digits: batch });
-    // уступаем кадру/интерфейсу: следующая пачка — асинхронно
-    setTimeout(pump, 0);
   }
 }
 
 self.onmessage = (ev: MessageEvent) => {
   const msg = ev.data as { type: string; from?: number };
   if (msg.type === 'start') {
+    // новый генератор: «Начать сначала» реально начинает π заново
+    gen = piDigits();
     skipTarget = msg.from ?? 0;
     skipped = 0;
-    running = true;
-    pump();
+    sendBatch();
   } else if (msg.type === 'need') {
-    if (!running) {
-      running = true;
-      pump();
-    }
+    sendBatch();
   }
 };

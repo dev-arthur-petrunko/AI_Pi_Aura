@@ -75,7 +75,18 @@ body {
   pointer-events: none;
 }
 
-#app > * {
+/* Наложения не перехватывают касания — жесты живут на canvas.
+   Кликабельные элементы включают pointer-events сами (наследуется). */
+.hud-intro,
+.hud-bottom,
+.hud-toast,
+.hud-pulse {
+  pointer-events: none;
+}
+
+.hud-menu-dot,
+.menu-sheet,
+.menu-backdrop {
   pointer-events: auto;
 }
 
@@ -162,6 +173,37 @@ body {
   outline: none;
 }
 
+/* Пульс: мягкий световой всплеск в центре в такт ноте */
+.hud-pulse {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44vmin;
+  height: 44vmin;
+  margin: -22vmin 0 0 -22vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(150, 210, 255, 0.18), transparent 65%);
+  opacity: 0;
+}
+
+.hud-pulse.is-beating {
+  animation: pulse-flash 0.9s var(--ease);
+}
+
+@keyframes pulse-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.25);
+  }
+}
+
 .hud-toast {
   position: absolute;
   left: 50%;
@@ -229,12 +271,14 @@ body {
   padding: 10px 26px calc(26px + env(safe-area-inset-bottom));
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
-  transition: transform 0.5s var(--ease);
+  transition: transform 0.5s var(--ease), visibility 0.5s;
+  visibility: hidden; /* закрытый лист не должен ловить Tab */
   z-index: 10;
 }
 
 .menu-sheet.is-open {
   transform: translate(-50%, 0);
+  visibility: visible;
 }
 
 .menu-handle {
