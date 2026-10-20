@@ -29,6 +29,8 @@ body {
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
+  /* двойной тап не зумит (touch-action: manipulation), но пинч-зум остаётся доступен */
+  touch-action: manipulation;
 }
 
 #water {

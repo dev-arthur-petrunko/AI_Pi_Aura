@@ -20,7 +20,10 @@ if (!page) {
   process.exit(1);
 }
 
-const ws = new WebSocket(page.webSocketDebuggerUrl);
+// Своя вкладка: soak не должен драться с другими скриптами за одну страницу.
+const created = await fetch(`http://localhost:${CDP_PORT}/json/new?about:blank`, { method: 'PUT' });
+const target = await created.json();
+const ws = new WebSocket(target.webSocketDebuggerUrl);
 let id = 0;
 const pending = new Map();
 const errors = [];
@@ -122,5 +125,6 @@ writeFileSync('shot-soak.png', Buffer.from(shot.result.data, 'base64'));
 console.log(errors.length ? 'CONSOLE ISSUES:\n' + errors.join('\n') : 'CONSOLE: clean');
 const ok = grew && heapGrowMb < 60 && errors.length === 0;
 console.log(ok ? 'SOAK: OK' : 'SOAK: PROBLEMS');
+await fetch(`http://localhost:${CDP_PORT}/json/close/${target.id}`);
 ws.close();
 process.exit(ok ? 0 : 2);
