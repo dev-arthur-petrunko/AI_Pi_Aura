@@ -5,9 +5,16 @@
  * Все значения синхронизируются с audioCtx.currentTime.
  */
 
-import { formatNum, onLangChange, t } from '../i18n/index.ts';
+import { formatNum, getLang, onLangChange, t } from '../i18n/index.ts';
 
-const BREAKPOINT = 600;
+declare const __BUILD_ID__: string;
+const BUILD_ID = __BUILD_ID__;
+
+const SUN = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg>';
+const MOON = '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>';
+const SOUND = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 010 7"/></svg>';
+
+const BREAKPOINT = 900;
 const HISTORY_LIMIT = 200;
 
 const DIGIT_NOTES: Record<number, string> = {
@@ -36,6 +43,10 @@ export class Panel {
   private feynmanEl: HTMLElement;
   private footer: HTMLElement;
   private themeBtn: HTMLElement;
+  private soundBtn: HTMLElement;
+  private langBtn: HTMLElement;
+  private verEl: HTMLElement;
+  private theme: 'day' | 'night' = 'day';
 
   private history: number[] = [];
   private histCounts = new Array(10).fill(0);
@@ -117,18 +128,26 @@ export class Panel {
 
     this.themeBtn = document.createElement('button');
     this.themeBtn.className = 'panel-btn';
-    this.themeBtn.textContent = '☀';
+    this.themeBtn.innerHTML = this.theme === 'day' ? MOON : SUN;
+    this.themeBtn.setAttribute('aria-label', t('theme.day'));
     this.footer.appendChild(this.themeBtn);
 
-    const saveBtn = document.createElement('button');
-    saveBtn.className = 'panel-btn';
-    saveBtn.textContent = t('menu.save');
-    this.footer.appendChild(saveBtn);
+    this.soundBtn = document.createElement('button');
+    this.soundBtn.className = 'panel-btn';
+    this.soundBtn.innerHTML = SOUND;
+    this.soundBtn.setAttribute('aria-label', t('menu.sound'));
+    this.footer.appendChild(this.soundBtn);
 
-    const menuBtn = document.createElement('button');
-    menuBtn.className = 'panel-btn';
-    menuBtn.textContent = t('menu.close');
-    this.footer.appendChild(menuBtn);
+    this.langBtn = document.createElement('button');
+    this.langBtn.className = 'panel-btn';
+    this.langBtn.textContent = getLang() === 'uk' ? 'УКР' : 'ENG';
+    this.langBtn.setAttribute('aria-label', t('menu.language'));
+    this.footer.appendChild(this.langBtn);
+
+    this.verEl = document.createElement('span');
+    this.verEl.className = 'panel-ver';
+    this.verEl.textContent = `v2 · ${BUILD_ID}`;
+    this.footer.appendChild(this.verEl);
 
     this.setLayout(window.innerWidth);
     window.addEventListener('resize', () => this.setLayout(window.innerWidth));
@@ -277,11 +296,14 @@ export class Panel {
   setTheme(theme: 'day' | 'night'): void {
     const root = document.documentElement;
     root.setAttribute('data-theme', theme);
-    this.themeBtn.textContent = theme === 'day' ? '🌙' : '☀';
+    this.themeBtn.innerHTML = theme === 'day' ? MOON : SUN;
+  }
+
+  flashFeynman(active: boolean): void {
+    this.feynmanEl.style.opacity = active ? '1' : '0.6';
   }
 
   dispose(): void {
-    window.removeEventListener('resize', () => this.setLayout(window.innerWidth));
     this.panel.remove();
   }
 }

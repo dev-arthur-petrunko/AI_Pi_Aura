@@ -32,4 +32,7 @@
   "panel.digitOf": "цифра {n} з ∞",
   "panel.hist": "Які цифри вже випали",
   "panel.feynmanIn": "До точки Фейнмана: {n} цифр",
-  "panel.feynmanDone": "Точку Фейнмана пройдено"}
+  "panel.feynmanDone": "Точку Фейнмана пройдено",
+  "theme.day": "Тема",
+  "theme.night": "Ніч"
+}

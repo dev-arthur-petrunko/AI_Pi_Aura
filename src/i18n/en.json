@@ -32,4 +32,7 @@
   "panel.digitOf": "digit {n} of ∞",
   "panel.hist": "Which digits have appeared",
   "panel.feynmanIn": "{n} digits to the Feynman point",
-  "panel.feynmanDone": "Feynman point passed"}
+  "panel.feynmanDone": "Feynman point passed",
+  "theme.day": "Theme",
+  "theme.night": "Night"
+}
