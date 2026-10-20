@@ -3,6 +3,9 @@ dist/
 *.log
 *.png
 !public/*.png
+!docs/*.png
+shot-*.png
+*.pid
 .DS_Store
 .vite/
 .*.pid
