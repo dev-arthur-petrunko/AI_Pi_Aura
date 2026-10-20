@@ -9,6 +9,7 @@ import { AudioEngine } from './audio/engine.ts';
 import { Ripples, hashPos } from './gfx/ripples.ts';
 import { Renderer } from './gfx/renderer.ts';
 import { formatNum, getLang, initLang, onLangChange } from './i18n/index.ts';
+import { Panel } from './ui/panel.ts';
 import { FeynmanDetector } from './pi/feynman.ts';
 import { PiStream } from './pi/piStream.ts';
 import { Gestures } from './ui/gestures.ts';
@@ -25,6 +26,7 @@ const LOOKAHEAD = 0.12;
 const app = document.getElementById('app') as HTMLElement;
 const canvas = document.getElementById('water') as HTMLCanvasElement;
 const core = document.getElementById('core') as HTMLElement;
+const panel = new Panel(app);
 
 const state = loadState();
 
@@ -110,6 +112,7 @@ function scheduleDigit(whenAudioOrSec: number): boolean {
   const birth = waterTime + delay;
   const drop = ripples.addAtIndex(index, digit, birth, 0.7);
   renderer.addDrop(drop.x, drop.y, drop.radius, drop.strength);
+  panel.update(digit, index, stream.peek(3));
 
   hud.setDigit(index);
   hud.beat();
@@ -252,6 +255,7 @@ hud.menuButton.addEventListener('click', () => menu.toggle());
 window.addEventListener('pagehide', () => {
   stream.flush();
   renderer.dispose();
+  panel.dispose();
 });
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
