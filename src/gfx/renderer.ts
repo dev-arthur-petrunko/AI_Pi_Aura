@@ -45,6 +45,8 @@ export class Renderer {
   private sim = new Sim();
   private floor = new Floor({ cols: 16, rows: 200, tilePx: 64, fontPx: 30 });
   private floorTexture: WebGLTexture | null = null;
+  private bloomCanvas: HTMLCanvasElement | null = null;
+  private bloomCtx: CanvasRenderingContext2D | null = null;
   private onResize: ResizeFn;
   private stats: RendererStats = { fps: 60, scale: 1, mode: 'webgl2' };
 
@@ -188,6 +190,21 @@ export class Renderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
     gl.bindTexture(gl.TEXTURE_2D, null);
+
+    // bloom-холст (размытая копия, под основным)
+    this.bloomCanvas = document.createElement('canvas');
+    this.bloomCanvas.style.position = 'fixed';
+    this.bloomCanvas.style.inset = '0';
+    this.bloomCanvas.style.width = '100%';
+    this.bloomCanvas.style.height = '100%';
+    this.bloomCanvas.style.pointerEvents = 'none';
+    this.bloomCanvas.style.filter = 'blur(10px)';
+    this.bloomCanvas.style.opacity = '0.5';
+    this.bloomCanvas.style.zIndex = '0';
+    this.canvas.parentNode?.insertBefore(this.bloomCanvas, this.canvas);
+
+    const bloomCtx = this.bloomCanvas.getContext('2d');
+    if (bloomCtx) this.bloomCtx = bloomCtx;
   }
 
   private bindContextEvents(): void {
@@ -279,6 +296,13 @@ export class Renderer {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindTexture(gl.TEXTURE_2D, null);
     gl.activeTexture(gl.TEXTURE0);
+
+    // bloom: копия основного холста в bloom-холст (размытие через CSS)
+    if (this.bloomCtx && this.bloomCanvas) {
+      this.bloomCanvas.width = this.canvas.width;
+      this.bloomCanvas.height = this.canvas.height;
+      this.bloomCtx.drawImage(this.canvas, 0, 0);
+    }
   }
 
   /** Запасной путь: простые кольца на Canvas 2D. */
@@ -297,6 +321,7 @@ export class Renderer {
     }
     this.sim.dispose();
     if (this.floorTexture) this.gl?.deleteTexture(this.floorTexture);
+    if (this.bloomCanvas) this.bloomCanvas.remove();
     this.gl = null;
     this.ctx2d = null;
   }

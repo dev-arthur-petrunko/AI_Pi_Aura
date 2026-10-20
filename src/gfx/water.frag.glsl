@@ -76,6 +76,15 @@ void main() {
   float depth = smoothstep(0.2, 1.0, p.y);
   col = mix(col, uWaterDeep, depth * 0.5);
 
+  // --- sunrays: лучи света от направления у Солнца ---
+  float ray = dot(normalize(uLight.xy), normalize(p));
+  ray = pow(max(ray, 0.0), 60.0);
+  col += vec3(1.0, 0.95, 0.85) * ray * 0.4;
+
+  // --- зерно ---
+  float grain = (hash21(gl_FragCoord.xy + uTime * 0.5) - 0.5) * 0.015;
+  col += grain * (1.0 - smoothstep(0.0, 0.3, dot(col, vec3(0.333))));
+
   fragColor = vec4(col, 1.0);
 }
 
