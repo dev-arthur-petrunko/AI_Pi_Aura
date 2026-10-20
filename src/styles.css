@@ -1,14 +1,49 @@
-/* π · Aura — дизайн-токены и стили. Все значения — только через :root. */
-
+/* π · Aura — дизайн-токены и стили. Тема по умолчанию — День (Aqua).
+   Ночь включается через data-theme="night" на <html> или ?theme=night. */
+/* Токены без привязки к теме (остаются одинаковыми): */
 :root {
-  --bg: #05060D;
-  --glass: rgba(255, 255, 255, 0.08);
-  --glass-border: rgba(255, 255, 255, 0.14);
-  --text: rgba(255, 255, 255, 0.92);
-  --text-dim: rgba(255, 255, 255, 0.55);
   --radius: 28px;
   --blur: 28px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- День «Aqua» (по умолчанию) --- */
+:root,
+[data-theme="day"] {
+  --surface-top: #E4FAFC;
+  --water-mid: #7FD8E6;
+  --water-deep: #1B8FB3;
+  --tile: #BFEAF2;
+  --grout: #8FD2E0;
+  --caustic: rgba(255, 255, 255, 0.45);
+  --ink: #0B3C5D;
+  --ink-dim: rgba(11, 60, 93, 0.55);
+  --glass: rgba(255, 255, 255, 0.38);
+  --glass-border: rgba(255, 255, 255, 0.65);
+  --bg: var(--surface-top);
+  --text: var(--ink);
+  --text-dim: var(--ink-dim);
+}
+
+/* --- Ночь «Deep» --- */
+[data-theme="night"] {
+  --surface-top: #04141F;
+  --water-mid: #0A3550;
+  --water-deep: #0B6E8C;
+  --tile: #123A52;
+  --grout: #0F2E40;
+  --caustic: rgba(127, 240, 255, 0.35);
+  --ink: rgba(255, 255, 255, 0.92);
+  --ink-dim: rgba(255, 255, 255, 0.55);
+  --glass: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --bg: var(--surface-top);
+  --text: var(--ink);
+  --text-dim: var(--ink-dim);
+}
+
+html[data-theme="night"] {
+  color-scheme: dark;
 }
 
 * {
