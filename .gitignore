@@ -9,3 +9,11 @@ shot-*.png
 .DS_Store
 .vite/
 .*.pid
+# отладочные артефакты (не часть проекта)
+lh-*.json
+lh.json
+p1.html
+p2.html
+scripts/
+preview*.log
+preview*.pid
