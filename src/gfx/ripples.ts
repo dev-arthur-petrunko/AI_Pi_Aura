@@ -4,9 +4,10 @@
  *
  * Каждая капля: позиция, время рождения, цифра (для цвета подсветки плитки),
  * радиус и сила (зависят от высоты ноты).
+ *
+ * Формулы позиции/силы/радиуса — из образца reference-water.html.
  */
 
-export const MAX_DROPS = 24;
 export const DROP_LIFETIME = 6.0;
 
 export function hashPos(i: number): { x: number; y: number } {
@@ -26,11 +27,38 @@ export interface Drop {
   strength: number; // сила (0..1)
 }
 
+/** Чистая функция: параметры капли для цифры d по формулам из образца.
+ *  panelFrac — доля ширины экрана, занятая левой панелью (0..1).
+ *  repeat — цифра повторилась подряд (сила ×1.8).
+ */
+export function dropParams(
+  d: number,
+  idx: number,
+  repeat: boolean,
+  panelFrac: number,
+): { x: number; y: number; R: number; K: number } {
+  const pl = panelFrac; // доля экрана под панелью
+  const x = pl + (1 - pl) * (0.1 + 0.8 * (d / 9));
+  const y = 0.5 + 0.17 * Math.sin(idx * 0.7) + 0.08 * Math.sin(idx * 1.9);
+  const R = 0.075 - 0.045 * (d / 9);
+  const K = (0.026 - 0.012 * (d / 9)) * (repeat ? 1.8 : 1);
+  return { x, y, R, K };
+}
+
+export interface RippleDrop {
+  x: number; // нормализовано 0..1
+  y: number; // нормализовано 0..1
+  birth: number; // часы sync
+  code: number; // цифра 0–9
+  radius: number; // радиус волны (0..1)
+  strength: number; // сила (0..1)
+}
+
 export class Ripples {
-  private drops: Drop[] = [];
+  private drops: RippleDrop[] = [];
 
   /** Добавить каплю по детерминированной позиции цифры (якорь + сдвиг). Возвращает созданную каплю. */
-  addAtIndex(index: number, code: number, time: number, weight = 0.7): Drop {
+  addAtIndex(index: number, code: number, time: number, weight = 0.7): RippleDrop {
     const p = hashPos(index);
     // якорь цифры по x: низкие ноты слева, высокие справа
     const ax = 0.15 + 0.70 * (code / 9);
@@ -42,23 +70,20 @@ export class Ripples {
     // сила и радиус зависят от веса (ноты): низкая нота = больше и сильнее
     const strength = 0.06 + weight * 0.10;
     const radius = 0.08 + weight * 0.12;
-    const drop: Drop = { x, y, birth: time, code, radius, strength };
+    const drop: RippleDrop = { x, y, birth: time, code, radius, strength };
     this.drops.push(drop);
-    while (this.drops.length > MAX_DROPS) this.drops.shift();
     return drop;
   }
 
   /** Добавить каплю в точку (x, y). */
   add(x: number, y: number, code: number, time: number, weight = 0.7): void {
-    // сила и радиус зависят от веса (ноты): низкая нота = больше и сильнее
     const strength = 0.06 + weight * 0.10;
     const radius = 0.08 + weight * 0.12;
     this.drops.push({ x, y, birth: time, code, radius, strength });
-    while (this.drops.length > MAX_DROPS) this.drops.shift();
   }
 
   /** Возвращает копию активных капель для передачи в Sim. */
-  getDrops(): Drop[] {
+  getDrops(): RippleDrop[] {
     return [...this.drops];
   }
 

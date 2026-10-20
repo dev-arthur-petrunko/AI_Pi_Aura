@@ -1,4 +1,4 @@
-﻿/**
+/**
  * π · Aura — точка входа.
  * Связывает: цифры π → (нота + капля) в одном кадре, меню, HUD, жесты, рендер.
  * Единые часы — аудио-часы (с непрерывным offset), вода и звук стартуют вместе.
@@ -6,16 +6,16 @@
 
 import './styles.css';
 import { AudioEngine } from './audio/engine.ts';
-import { Ripples, hashPos } from './gfx/ripples.ts';
+import { Ripples, dropParams } from './gfx/ripples.ts';
 import { Renderer } from './gfx/renderer.ts';
-import { formatNum, getLang, initLang, onLangChange } from './i18n/index.ts';
+import { initLang, onLangChange } from './i18n/index.ts';
 import { Panel } from './ui/panel.ts';
 import { FeynmanDetector } from './pi/feynman.ts';
 import { PiStream } from './pi/piStream.ts';
 import { Gestures } from './ui/gestures.ts';
-import { Hud } from './ui/hud.ts';
 import { loadState, Menu } from './ui/menu.ts';
 import { saveMoment } from './ui/save.ts';
+import { colorForDigit } from './gfx/palette.ts';
 
 initLang();
 
@@ -25,15 +25,13 @@ const LOOKAHEAD = 0.12;
 
 const app = document.getElementById('app') as HTMLElement;
 const canvas = document.getElementById('water') as HTMLCanvasElement;
-const core = document.getElementById('core') as HTMLElement;
 const panel = new Panel(app);
 
 const state = loadState();
 
 const ripples = new Ripples();
-const renderer = new Renderer(canvas, ripples, () => undefined);
+const renderer = new Renderer(canvas, () => undefined);
 const engine = new AudioEngine();
-const hud = new Hud(app);
 const stream = new PiStream();
 const detector = new FeynmanDetector();
 
@@ -80,7 +78,6 @@ const menu = new Menu(app, state, {
     stream.reset();
     detector.reset();
     lastDigits.length = 0;
-    hud.setDigit(0);
     nextAt = nowSec() + 0.3;
   },
   onLang: () => {
@@ -93,8 +90,7 @@ engine.setVolume(state.volume);
 engine.setMuted(state.muted);
 
 onLangChange(() => {
-  // тег <html lang> уже обновлён модулем i18n — HUD перерисован там же
-  if (stream.index > 0) hud.setDigit(stream.index - 1);
+  // тег <html lang> уже обновлён модулем i18n
 });
 
 /** Цифра из потока → нота + капля + счётчик + детектор Фейнмана. false — буфер пуст. */
@@ -111,21 +107,14 @@ function scheduleDigit(whenAudioOrSec: number): boolean {
   const delay = Math.max(0, whenAudioOrSec - nowSec());
   engine.playDigit(digit, engine.ctx ? engine.ctx.currentTime + delay : undefined);
 
-  const birth = waterTime + delay;
-  const drop = ripples.addAtIndex(index, digit, birth, 0.7);
-  renderer.addDrop(drop.x, drop.y, drop.radius, drop.strength);
+  const repeat = index > 0 && lastDigits[lastDigits.length - 2] === digit;
+  const p = dropParams(digit, index, repeat, app.clientWidth > 0 ? Math.min(1, 344 / app.clientWidth) : 0);
+  // позиция/сила/радиус — по формулам образца
+  renderer.addDrop(p.x, p.y, p.R, p.K);
   panel.update(digit, index, stream.peek(3));
-
-  hud.setDigit(index);
-  hud.beat();
-  core.classList.remove('is-beating');
-  void core.offsetWidth;
-  core.classList.add('is-beating');
-  pulse = 1;
 
   if (detector.push(digit, index)) {
     engine.feynmanChord();
-    hud.flash('feynman', undefined, 6000);
   }
   return true;
 }
@@ -159,19 +148,24 @@ function renderFrame(): void {
     0.5 + tiltCur[1] * 0.4,
     0.9,
   ];
+  const day = document.documentElement.dataset.theme === 'day' ? 1 : 0;
+  // вспышка текущей цифры на дне: затухает после звука
+  const flash = Math.min(1, pulse);
+  const curDigit = lastDigits.length > 0 ? lastDigits[lastDigits.length - 1] : 0;
+  const flashColor = colorForDigit(curDigit);
+  const col = Math.floor(curDigit % 16);
+  const row = Math.floor(curDigit / 16);
   renderer.render({
     time: waterTime,
     light,
     sky: [0.4, 0.7, 0.9],
     waterDeep: [0.02, 0.06, 0.12],
-    perturb: 0.05,
+    perturb: 0.035,
+    day,
+    flash,
+    flashColor,
+    flashCenter: [col + 0.5, row + 0.5],
   });
-
-  // уровень звука → пульс ядра π (scale 1.0–1.06) + линия воды внизу
-  const level = engine.ready ? engine.getLevel() : 0;
-  const scale = 1 + level * 0.06;
-  core.style.transform = `translate(-50%, -50%) scale(${scale})`;
-  hud.setLevel(level);
 }
 
 function frame(now: number): void {
@@ -184,7 +178,6 @@ function frame(now: number): void {
     waterTime += dt;
     scheduler();
   }
-  // старые капли уходят, иначе кадр зарастает кольцами
   ripples.prune(waterTime);
   pulse *= Math.exp(-dt * 2.2);
   if (pulse < 0.01) pulse = 0;
@@ -200,14 +193,11 @@ function firstTouch(): void {
     // делаем аудио-часы непрерывными с часами воды/производительности
     clockOffset = performance.now() / 1000 - engine.ctx.currentTime;
   }
-  hud.hideIntro();
   nextAt = nowSec() + 0.35;
 
   const saved = stream.index;
   if (saved > 0) {
-    hud.flash('resume', { n: formatNum(saved, getLang()) }, 5200);
   } else {
-    hud.flash('infinite', { n: 1 }, 5200);
   }
 }
 
@@ -218,19 +208,15 @@ function toggleFreeze(): void {
   engine.setFrozen(frozen);
   if (frozen) {
     pauseStartedAt = nowSec();
-    hud.setFrozenLabel([...lastDigits]);
     engine.arpeggio([...lastDigits]);
   } else {
-    // продолжаем с места остановки — часы плана сдвигаются на время паузы
     nextAt += nowSec() - pauseStartedAt;
-    hud.setFrozenLabel(null);
   }
 }
 
 function changeSpeed(delta: number): void {
   speed = Math.min(2, Math.max(0.5, Math.round((speed + delta) * 100) / 100));
   menu.setSpeedUi(speed);
-  hud.flashRaw(`${speed}×`, 900);
 }
 
 new Gestures(canvas, {
@@ -242,7 +228,6 @@ new Gestures(canvas, {
     const code = Math.min(9, Math.max(0, Math.floor(x * 10)));
     ripples.add(x, y, code, waterTime, 0.85);
     renderer.addDrop(x, y, 0.08 + 0.85 * 0.12, 0.06 + 0.85 * 0.10);
-    hud.beat();
     pulse = Math.max(pulse, 0.8);
   },
   onSwipe: (up) => {
@@ -261,8 +246,6 @@ new Gestures(canvas, {
     tiltTarget[1] = Math.max(-1, Math.min(1, (beta - 45) / 45));
   },
 });
-
-hud.menuButton.addEventListener('click', () => menu.toggle());
 
 /** Сохранение позиции в π при уходе со страницы. */
 window.addEventListener('pagehide', () => {
@@ -289,41 +272,7 @@ if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.st
   });
 }
 
+
 // старт цикла
 lastFrame = performance.now();
 requestAnimationFrame(frame);
-
-// debug-хук для приёмочных проверок: открывать с #debug
-if (location.hash.startsWith('#debug')) {
-  (window as unknown as { __aura: object }).__aura = {
-    seed(n: number): void {
-      ripples.clear();
-      // останавливаем поток: кадр становится полностью детерминированным
-      frozen = true;
-      for (let i = 0; i < n; i++) {
-        const code = (i * 3 + 2) % 10;
-        // те же детерминированные места, что и в обычном потоке
-        const p = hashPos(i);
-        ripples.add(
-          p.x,
-          p.y,
-          code,
-          // фиксированный возраст: кольцо уже разошлось и читается
-          waterTime - 1.1 - (i % 4) * 0.55,
-          0.7,
-        );
-      }
-    },
-    state(): Record<string, unknown> {
-      return {
-        waterTime,
-        speed,
-        started,
-        frozen,
-        drops: ripples.count,
-        fps: renderer.rendererStats.fps,
-        mode: renderer.rendererStats.mode,
-      };
-    },
-  };
-}
