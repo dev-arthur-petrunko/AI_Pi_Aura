@@ -272,7 +272,7 @@ if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.st
     window.location.reload();
   });
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
+    navigator.serviceWorker.register('./sw.js?v=3').catch(() => {
       /* офлайн-режим не критичен */
     });
   });
