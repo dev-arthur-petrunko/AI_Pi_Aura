@@ -5,7 +5,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((cache) => cache.addAll(['./', './index.html', './manifest.webmanifest']))
+      .then((cache) => cache.addAll(['./', './index.html', './manifest.webmanifest', './pi-1m.bin']))
       .then(() => self.skipWaiting()),
   );
 });

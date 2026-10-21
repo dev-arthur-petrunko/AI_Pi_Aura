@@ -1,3 +1,8 @@
+import { millionCached } from './million.ts';
+
+let _cache: number[] = [];
+let _gen: Generator<number> | null = null;
+
 /**
  * Алгоритм Гиббонса (spigot) для числа π на BigInt.
  * Выдаёт десятичные цифры по одной, бесконечно: 3, 1, 4, 1, 5, 9, ...
@@ -31,12 +36,22 @@ export function* piDigits(): Generator<number> {
 
 /** Следующие `count` цифр, начиная с индекса `from` (0 = «3» перед запятой). */
 export function piSlice(from: number, count: number): number[] {
-  const out: number[] = [];
-  const it = piDigits();
-  for (let i = 0; i < from + count; i++) {
-    const d = it.next();
-    if (d.done) break;
-    if (i >= from) out.push(d.value as number);
+  if (from < 0) from = 0;
+  if (count < 0) count = 0;
+  const m = millionCached();
+  if (m && from + count <= m.length) {
+    const out: number[] = [];
+    for (let i = from; i < from + count; i++) out.push(m.charCodeAt(i) - 48);
+    return out;
   }
-  return out;
+  const need = from + count;
+  if (_cache.length < need) {
+    if (!_gen) _gen = piDigits();
+    while (_cache.length < need) {
+      const r = _gen.next();
+      if (r.done) break;
+      _cache.push(r.value as number);
+    }
+  }
+  return _cache.slice(from, from + count);
 }

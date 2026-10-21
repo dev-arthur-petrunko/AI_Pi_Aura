@@ -92,6 +92,23 @@ export class Floor {
     this.loadDigits(from, this.cols * this.rows);
   }
 
+  private highlightStart = -1;
+  private highlightLen = 0;
+
+  setHighlight(start: number, len: number): void {
+    this.highlightStart = start;
+    this.highlightLen = len;
+    // load digits around highlight
+    const row = Math.floor(start / this.cols);
+    const from = Math.max(0, row - 4) * this.cols;
+    this.loadDigits(from, this.cols * this.rows);
+  }
+
+  clearHighlight(): void {
+    this.highlightStart = -1;
+    this.highlightLen = 0;
+    this.draw();
+  }
   /** Сместить сетку вглубь (положительное = ближе к viewer, отрицательное = уходит). */
   setScroll(y: number): void {
     this.scrollY = y;
@@ -130,13 +147,24 @@ export class Floor {
         const y = worldY + this.tilePx / 2;
         const globalIndex = this.digitStart + flatIndex;
 
+        const isHit =
+          this.highlightLen > 0 &&
+          globalIndex >= this.highlightStart &&
+          globalIndex < this.highlightStart + this.highlightLen;
+
         const hv = Math.abs(Math.sin(globalIndex * 12.9898) * 43758.5453) % 1;
         if (day) {
-          c.fillStyle = `hsl(190 ${55 + hv * 10}% ${61 + hv * 5}%)`;
+          c.fillStyle = isHit ? 'rgba(255,217,138,0.35)' : `hsl(190 ${55 + hv * 10}% ${61 + hv * 5}%)`;
         } else {
-          c.fillStyle = `hsl(200 55% ${9 + hv * 3}%)`;
+          c.fillStyle = isHit ? 'rgba(255,217,138,0.25)' : `hsl(200 55% ${9 + hv * 3}%)`;
         }
         c.fillRect(x + 2, y + 2, this.tilePx - 4, this.tilePx - 4);
+
+        if (isHit) {
+          c.strokeStyle = '#FFD98A';
+          c.lineWidth = 2;
+          c.strokeRect(x + 2, y + 2, this.tilePx - 4, this.tilePx - 4);
+        }
 
         const a =
           globalIndex < this.activeIndex
@@ -144,9 +172,11 @@ export class Floor {
             : globalIndex === this.activeIndex
               ? 1
               : 0.2;
-        c.fillStyle = day
-          ? `rgba(6, 60, 95, ${a})`
-          : `rgba(170, 240, 255, ${a})`;
+        c.fillStyle = isHit
+          ? '#FFD98A'
+          : day
+            ? `rgba(6, 60, 95, ${a})`
+            : `rgba(170, 240, 255, ${a})`;
         c.fillText(String(digit), x, y + 2);
       }
     }

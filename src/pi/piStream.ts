@@ -1,4 +1,5 @@
 import { piDigits } from './spigot.ts';
+import { millionCached } from './million.ts';
 
 /**
  * Поток цифр π для основного потока.
@@ -40,11 +41,23 @@ export class PiStream {
   private savedUpTo = 0;
   /** Сколько цифр надо пропустить в основном потоке (запасной путь). */
   private skipLeft = 0;
+  private persistEnabled = true;
+
+  setPersist(enabled: boolean): void {
+    this.persistEnabled = enabled;
+  }
+
+  private million: string | null = millionCached();
+  private readonly MILLION_LIMIT = 1_000_000;
 
   constructor(startIndex = PiStream.loadIndex()) {
     this.consumed = startIndex;
     this.savedUpTo = startIndex;
-    this.start(startIndex);
+    if (this.million && startIndex < this.MILLION_LIMIT) {
+      this.fillFromMillion();
+    } else {
+      this.start(startIndex);
+    }
   }
 
   static loadIndex(): number {
@@ -91,7 +104,28 @@ export class PiStream {
     }
   }
 
-  /** Запасной путь: генерация в основном потоке, с пропуском до `from`. */
+  /** Подключить миллион цифр (ленивая загрузка завершилась). */
+  setMillion(s: string): void {
+    this.million = s;
+    if (this.consumed < this.MILLION_LIMIT) {
+      this.worker?.terminate();
+      this.worker = null;
+      this.generator = null;
+      this.skipLeft = 0;
+      this.buffer = [];
+      this.fillFromMillion();
+    }
+  }
+
+  private fillFromMillion(): void {
+    if (!this.million) return;
+    const start = this.consumed + this.buffer.length;
+    if (start >= this.MILLION_LIMIT) return;
+    const end = Math.min(this.MILLION_LIMIT, start + Math.max(BUFFER_MIN, BATCH));
+    const chunk = this.million.slice(start, end);
+    for (let i = 0; i < chunk.length; i++) this.buffer.push(chunk.charCodeAt(i) - 48);
+    this.notify();
+  }
   private useMainThread(from: number): void {
     this.generator = piDigits();
     this.skipLeft = from;
@@ -99,6 +133,10 @@ export class PiStream {
   }
 
   private requestMore(): void {
+    if (this.million && this.consumed + this.buffer.length < this.MILLION_LIMIT) {
+      this.fillFromMillion();
+      return;
+    }
     if (this.worker) {
       this.worker.postMessage({ type: 'need' });
     } else {
@@ -168,6 +206,7 @@ export class PiStream {
   }
 
   private persist(): void {
+    if (!this.persistEnabled) return;
     // пишем в localStorage не чаще, чем раз в 10 цифр
     if (this.consumed - this.savedUpTo >= 10) {
       this.savedUpTo = this.consumed;
@@ -182,7 +221,9 @@ export class PiStream {
     this.savedUpTo = 0;
     this.skipLeft = 0;
     PiStream.resetIndex();
-    if (this.worker) {
+    if (this.million) {
+      this.fillFromMillion();
+    } else if (this.worker) {
       this.worker.postMessage({ type: 'start', from: 0 });
     } else {
       this.useMainThread(0);
@@ -195,15 +236,27 @@ export class PiStream {
     this.consumed = Math.max(0, to);
     this.savedUpTo = this.consumed;
     this.skipLeft = 0;
-    if (this.worker) {
+    if (this.million && this.consumed < this.MILLION_LIMIT) {
+      this.fillFromMillion();
+    } else if (this.worker) {
       this.worker.postMessage({ type: 'start', from: this.consumed });
     } else {
       this.useMainThread(this.consumed);
     }
   }
   flush(): void {
+    if (!this.persistEnabled) return;
     storageSet(STORE_KEY, String(this.consumed));
     this.savedUpTo = this.consumed;
+  }
+
+  countsUpTo(n: number): number[] {
+    const out = new Array(10).fill(0);
+    const s = this.million;
+    if (!s) return out;
+    const limit = Math.min(Math.max(0, n), s.length);
+    for (let i = 0; i < limit; i++) out[s.charCodeAt(i) - 48]++;
+    return out;
   }
 
   dispose(): void {

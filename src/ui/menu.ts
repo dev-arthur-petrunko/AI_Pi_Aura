@@ -23,6 +23,7 @@ export interface MenuActions {
   onSave(): void;
   onRestart(): void;
   onLang(l: Lang): void;
+  onDate(): void;
 }
 
 const STORE = {
@@ -204,6 +205,7 @@ export class Menu {
       </div>
 
       <div class="menu-btn-row">
+        <button class="menu-action-btn" id="btn-date">${t('date.title')}</button>
         <button class="menu-action-btn" id="btn-save">${t('menu.save')}</button>
         <details class="menu-about">
           <summary class="menu-action-btn" id="btn-about">${t('menu.about')}</summary>
@@ -281,6 +283,11 @@ export class Menu {
       const label = q<HTMLElement>('#speed-val');
       if (label) label.textContent = speedLabel(v);
       this.actions.onSpeed(v);
+    });
+
+    q<HTMLButtonElement>('#btn-date')?.addEventListener('click', () => {
+      this.actions.onDate();
+      this.close();
     });
 
     q<HTMLButtonElement>('#btn-save')?.addEventListener('click', () => {

@@ -236,6 +236,15 @@ export class Renderer {
     this.floor.setActive(index);
   }
 
+  setHighlight(start: number, len: number): void {
+    this.floor.setHighlight(start, len);
+    this.updateFloorTexture();
+  }
+  clearHighlight(): void {
+    this.floor.clearHighlight();
+    this.updateFloorTexture();
+  }
+
   setTheme(theme: 'day' | 'night'): void {
     this.floor.setTheme(theme);
     this.updateFloorTexture();

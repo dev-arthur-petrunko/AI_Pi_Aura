@@ -353,3 +353,12 @@ npm test             # vitest run
 - vite.config.ts: BUILD_ID из git hash.
 - Очистка: preview.log.
 - Тесты 27/27, build OK.
+### 11.8 «Твоя дата в π» (E2)
+
+- `public/pi-1m.bin`: 500 000 байт, SHA-256 `2fd073e51666cf55e6e5d36dd2f10562fa71dcf1f4e297476af39a9691e19e8f`.
+- `src/pi/million.ts`: ленивая загрузка и распаковка 2 цифр/байт.
+- `src/pi/dateSearch.ts`: validateDate, candidates, findAll, chance.
+- `src/pi/dateMode.ts`: dateModePlan.
+- `src/ui/dateDialog.ts`: окно ввода/результата.
+- PiStream использует миллион цифр как источник при индексах < 1 000 000.
+- Тесты: 40/40 зелёные, build OK.

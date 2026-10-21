@@ -9,10 +9,13 @@ import { AudioEngine } from './audio/engine.ts';
 import { Renderer } from './gfx/renderer.ts';
 import { PAL_HEX } from './gfx/palette.ts';
 import { tilePos } from './gfx/ripples.ts';
-import { initLang, onLangChange } from './i18n/index.ts';
+import { initLang, onLangChange, t } from './i18n/index.ts';
 import { Panel } from './ui/panel.ts';
+import { DateDialog } from './ui/dateDialog.ts';
+import { dateModePlan } from './pi/dateMode.ts';
 import { FeynmanDetector } from './pi/feynman.ts';
 import { PiStream } from './pi/piStream.ts';
+import { loadMillion } from './pi/million.ts';
 import { Gestures } from './ui/gestures.ts';
 import { loadState, Menu } from './ui/menu.ts';
 import { saveMoment } from './ui/save.ts';
@@ -26,6 +29,7 @@ const app = document.getElementById('app') as HTMLElement;
 const canvas = document.getElementById('water') as HTMLCanvasElement;
 
 const panel = new Panel(app);
+const dateDialog = new DateDialog(app, { onListen: (hit) => enterDateMode(hit) });
 const renderer = new Renderer(canvas, () => undefined);
 const engine = new AudioEngine();
 const stream = new PiStream();
@@ -52,6 +56,7 @@ panel.setTheme(theme);
 renderer.setTheme(theme);
 panel.onThemeChange = (t) => { theme = t; menu.setThemeUi(t); renderer.setTheme(t); };
 panel.onMenuToggle = () => menu.toggle();
+panel.onDateOpen = () => dateDialog.open();
 
 let speed = state.speed;
 let started = false;
@@ -59,6 +64,12 @@ let frozen = false;
 let idx = stream.index;
 let nextAt = 0;
 let lastDigitTime = 0;
+function primeMillionBackground(): void {
+  void loadMillion().then((s) => stream.setMillion(s)).catch(() => {});
+}
+
+let dateMode: { prevIndex: number; start: number; len: number; endIndex: number } | null = null;
+let dateCapsule: HTMLElement | null = null;
 
 const histCounts = new Array(10).fill(0);
 const lastDigits: number[] = [];
@@ -89,8 +100,9 @@ function playDigit(digit: number, index: number): void {
     const px = x * canvas.clientWidth;
     const py = (1 - y) * canvas.clientHeight;
     gh.textContent = String(digit);
-    gh.style.left = px + 'px';
-    gh.style.top = py + 'px';
+    const half = 80;
+    gh.style.left = Math.min(canvas.clientWidth - half, Math.max(half, px)) + 'px';
+    gh.style.top = Math.min(canvas.clientHeight - half, Math.max(half, py)) + 'px';
     gh.style.setProperty('--gc', PAL_HEX[digit] ?? '#fff');
     gh.classList.remove('go');
     void gh.offsetWidth;
@@ -100,6 +112,14 @@ function playDigit(digit: number, index: number): void {
   lastDigits.push(digit);
   if (lastDigits.length > 10) lastDigits.shift();
 
+  if (dateMode) {
+    if (index === dateMode.endIndex) {
+      engine.feynmanChord();
+    }
+    if (index >= dateMode.endIndex + 6) {
+      showDateCapsule();
+    }
+  }
   const future = stream.peek(15);
   panel.addDigit(digit, index, future);
 
@@ -122,12 +142,19 @@ function beat(): void {
 }
 
 /** Первое касание: разблокировать звук и начать. */
+(window as any).__setMillion = (s: string) => stream.setMillion(s);
+
 function firstTouch(): void {
   if (started) return;
   started = true;
   engine.init();
-  nextAt = performance.now() + 350; // первая цифра через 350 мс
+  nextAt = performance.now() + 350;
   panel.hideIntro();
+  try {
+    const ric = (window as any).requestIdleCallback;
+    if (typeof ric === 'function') ric(() => primeMillionBackground());
+    else setTimeout(primeMillionBackground, 1000);
+  } catch { /* ignore */ }
 }
 
 /** Заморозка: стоп новых нот, мягкое арпеджио последних цифр. */
@@ -150,7 +177,54 @@ function changeSpeed(delta: number): void {
   menu.setSpeedUi(speed);
 }
 
-/** Меню и его действия. */
+/** Вход в режим «Дата». */
+function enterDateMode(hit: { index: number; len: number }): void {
+  if (!started) firstTouch();
+  const prevIndex = stream.index;
+  const plan = dateModePlan(hit.index, hit.len);
+  stream.setPersist(false);
+  stream.seek(Math.max(0, plan.start));
+  idx = Math.max(0, plan.start);
+  renderer.setHighlight(hit.index, hit.len);
+  panel.setDateBadge(true);
+  dateMode = { prevIndex, start: hit.index, len: hit.len, endIndex: hit.index + hit.len - 1 };
+  nextAt = performance.now() + 350;
+}
+
+function exitDateMode(stay: boolean): void {
+  if (!dateMode) return;
+  if (stay) {
+    stream.setPersist(true);
+    stream.flush();
+  } else {
+    const prev = dateMode.prevIndex;
+    stream.seek(prev);
+    idx = prev;
+    stream.setPersist(true);
+    stream.flush();
+  }
+  renderer.clearHighlight();
+  panel.setDateBadge(false);
+  if (dateCapsule) {
+    dateCapsule.remove();
+    dateCapsule = null;
+  }
+  dateMode = null;
+}
+
+function showDateCapsule(): void {
+  if (dateCapsule || !dateMode) return;
+  const cap = document.createElement('div');
+  cap.className = 'date-capsule glass';
+  cap.innerHTML = `<button id="date-keep">${t('date.keep')}</button><button id="date-back">${t('date.back')}</button>`;
+  document.body.appendChild(cap);
+  dateCapsule = cap;
+  const timer = window.setTimeout(() => {
+    if (dateCapsule === cap) exitDateMode(true);
+  }, 30000);
+  cap.querySelector('#date-keep')?.addEventListener('click', () => { clearTimeout(timer); exitDateMode(true); });
+  cap.querySelector('#date-back')?.addEventListener('click', () => { clearTimeout(timer); exitDateMode(false); });
+}
 const menu = new Menu(app, state, {
   onVolume: (v) => engine.setVolume(v),
   onMute: (m) => engine.setMuted(m),
@@ -184,6 +258,7 @@ const menu = new Menu(app, state, {
   onLang: () => {
     /* i18n обновит панель и меню через onLangChange */
   },
+  onDate: () => dateDialog.open(),
 });
 
 onLangChange(() => {
@@ -299,7 +374,7 @@ if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.st
   });
 }
 
-// E4: ссылка на позицию #d=N
+// E4: ссылка на позицию #d=N (и &m=L для подсветки даты)
 try {
   const hash = window.location.hash;
   const m = hash.match(/#d=(\d+)/);
@@ -308,6 +383,13 @@ try {
     if (Number.isFinite(pos) && pos >= 0) {
       stream.seek(pos);
       idx = pos;
+      const mm = hash.match(/[?&]m=(\d+)/);
+      if (mm) {
+        const len = parseInt(mm[1], 10);
+        if (Number.isFinite(len) && len > 0) {
+          renderer.setHighlight(pos, len);
+        }
+      }
     }
   }
 } catch { /* ignore */ }
@@ -333,7 +415,12 @@ document.addEventListener('pointermove', markInteraction, { passive: true });
 document.addEventListener('pointerdown', markInteraction, { passive: true });
 document.addEventListener('keydown', markInteraction);
 
-// Fullscreen API (F key)
+// Клавиша D — окно даты
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'd' || e.key === 'D') {
+    if (!menu.isOpen) dateDialog.open();
+  }
+});
 document.addEventListener('keydown', (e) => {
   if (e.key === 'f' || e.key === 'F') {
     if (!document.fullscreenElement) {
@@ -344,6 +431,11 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// старт цикла
+// Esc — выход из режима даты
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && dateMode) {
+    exitDateMode(false);
+  }
+});
 requestAnimationFrame(frame);
 

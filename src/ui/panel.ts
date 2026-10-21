@@ -47,12 +47,16 @@ export class Panel {
   private soundBtn: HTMLElement;
   private langBtn: HTMLElement;
   private menuBtn: HTMLElement;
+  private menuFab: HTMLElement;
   private copyLinkBtn: HTMLElement;
+  private dateBtn: HTMLElement;
   private verEl: HTMLElement;
+  private versionCorner: HTMLElement;
   private introEl: HTMLElement;
   private theme: 'day' | 'night' = 'day';
   public onThemeChange?: (theme: 'day' | 'night') => void;
   public onMenuToggle?: () => void;
+  public onDateOpen?: () => void;
 
   private history: number[] = [];
   private histCounts = new Array(10).fill(0);
@@ -172,6 +176,14 @@ export class Panel {
     this.menuBtn.addEventListener('click', () => this.onMenuToggle?.());
     this.footer.appendChild(this.menuBtn);
 
+    // Кнопка даты
+    this.dateBtn = document.createElement('button');
+    this.dateBtn.className = 'panel-btn';
+    this.dateBtn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
+    this.dateBtn.setAttribute('aria-label', t('date.title'));
+    this.dateBtn.addEventListener('click', () => this.onDateOpen?.());
+    this.footer.appendChild(this.dateBtn);
+
     // E4: copy link button
     this.copyLinkBtn = document.createElement('button');
     this.copyLinkBtn.className = 'panel-btn';
@@ -187,8 +199,14 @@ export class Panel {
 
     this.verEl = document.createElement('span');
     this.verEl.className = 'panel-ver';
-    this.verEl.textContent = `v2 · ${BUILD_ID}`;
+    this.verEl.textContent = `v3 · ${BUILD_ID}`;
     this.footer.appendChild(this.verEl);
+
+    // Версия в углу экрана
+    this.versionCorner = document.createElement('div');
+    this.versionCorner.className = 'app-version';
+    this.versionCorner.textContent = `v3 · ${BUILD_ID}`;
+    _root.appendChild(this.versionCorner);
 
     // подсказка первого касания (стеклянная капсула, как в образце)
     this.introEl = document.createElement('div');
@@ -221,6 +239,15 @@ export class Panel {
       }
     } catch { /* ignore */ }
 
+    // Плавающая кнопка меню для узких экранов (телефоны)
+    this.menuFab = document.createElement('button');
+    this.menuFab.className = 'menu-fab';
+    this.menuFab.innerHTML = '◌';
+    this.menuFab.setAttribute('aria-label', t('menu.title'));
+    this.menuFab.setAttribute('aria-haspopup', 'dialog');
+    this.menuFab.addEventListener('click', () => this.onMenuToggle?.());
+    document.body.appendChild(this.menuFab);
+
     this.setLayout(window.innerWidth);
     window.addEventListener('resize', () => this.setLayout(window.innerWidth));
     onLangChange(() => this.renderText());
@@ -242,6 +269,7 @@ export class Panel {
       this.panel.style.flexDirection = 'column';
       this.panel.style.gap = '14px';
       this.panel.style.overflow = 'hidden';
+      this.panel.style.maxWidth = 'none';
       this.titleEl.style.display = 'block';
       this.subEl.style.display = 'block';
       this.digitBig.style.display = 'block';
@@ -252,6 +280,7 @@ export class Panel {
       this.footer.style.display = 'flex';
       this.footer.style.justifyContent = 'space-between';
       this.footer.style.marginTop = 'auto';
+      this.menuFab.style.display = 'none';
     } else {
       this.panel.style.left = '12px';
       this.panel.style.top = '12px';
@@ -268,6 +297,8 @@ export class Panel {
       this.panel.style.flexDirection = 'column';
       this.panel.style.gap = '0';
       this.panel.style.overflow = 'visible';
+      this.panel.style.maxWidth = 'calc(100vw - 24px)';
+      this.menuFab.style.display = 'grid';
       this.titleEl.style.display = 'block';
       this.subEl.style.display = 'none';
       this.digitBig.style.display = 'none';
@@ -454,8 +485,15 @@ export class Panel {
     this.feynmanEl.style.opacity = '1';
   }
 
+  setDateBadge(on: boolean): void {
+    // minimal: toggle data attribute; UI badge optional
+    this.panel.dataset.dateMode = on ? '1' : '0';
+  }
+
   dispose(): void {
+    this.menuFab.remove();
     this.introEl.remove();
+    this.versionCorner.remove();
     this.panel.remove();
   }
 }
