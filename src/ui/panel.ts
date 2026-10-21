@@ -297,7 +297,8 @@ export class Panel {
       this.panel.style.flexDirection = 'column';
       this.panel.style.gap = '0';
       this.panel.style.overflow = 'visible';
-      this.panel.style.maxWidth = 'calc(100vw - 24px)';
+      this.panel.style.maxWidth = 'calc(100vw - 36px)';
+      this.panel.style.padding = '10px 14px 10px 10px';
       this.menuFab.style.display = 'grid';
       this.titleEl.style.display = 'block';
       this.subEl.style.display = 'none';
