@@ -75,14 +75,14 @@ html, body {
 .panel-title { font-weight: 300; font-size: 30px; letter-spacing: 0.01em; margin: 0; }
 .panel-sub { font-size: 13px; color: var(--ink-dim); letter-spacing: 0.03em; margin: 3px 0 0; }
 
-.panel-digit-big { font-size: 112px; font-weight: 200; line-height: 1; font-variant-numeric: tabular-nums; margin: 0; }
+.panel-digit-big { font-size: 96px; font-weight: 200; line-height: 1; font-variant-numeric: tabular-nums; margin: 0; }
 .panel-digit-big.pop { animation: pop 0.6s var(--ease); }
 @keyframes pop { from { opacity: 0; transform: translateY(16px) scale(0.96); filter: blur(6px); } }
 
 .panel-note { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 15px; color: var(--ink-dim); }
 .panel-digit-dot { width: 9px; height: 9px; border-radius: 50%; }
 
-.panel-tape { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; min-height: 30px; align-items: baseline; font-size: 19px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
+.panel-tape { display: flex; flex-wrap: nowrap; gap: 6px; margin: 0; padding: 0; list-style: none; min-height: 30px; align-items: baseline; font-size: 19px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
 .panel-tape-digit { color: var(--ink-dim); opacity: 0.45; }
 .panel-tape-current { color: var(--ink); opacity: 1; text-shadow: 0 0 16px currentColor; font-size: 28px; font-weight: 500; margin: 0 2px; }
 .panel-tape-sep { color: var(--ink-dim); opacity: 0.3; font-size: 16px; }
@@ -92,7 +92,7 @@ html, body {
 .panel-hist-label { font-size: 11px; letter-spacing: 0.14em; color: var(--ink-dim); margin: 10px 0 6px 0; text-transform: uppercase; }
 .panel-hist { display: flex; gap: 4px; align-items: flex-end; height: 66px; margin: 0; padding: 0; list-style: none; }
 .panel-hist-bar { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; width: 18px; height: 100%; border-radius: 6px 6px 3px 3px; min-height: 4px; transition: height 0.9s var(--ease); }
-.panel-hist-label-digit { font-size: 9px; color: var(--ink-dim); margin-top: 4px; }
+.panel-hist-label-digit { font-size: 11px; color: var(--ink); margin-top: 4px; }
 
 .panel-feynman { font-size: 12px; font-weight: 300; color: var(--ink-dim); margin: 10px 0 0 0; opacity: 0.8; min-height: 34px; }
 

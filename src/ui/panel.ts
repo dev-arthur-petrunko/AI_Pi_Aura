@@ -83,12 +83,19 @@ export class Panel {
 
     this.digitNote = document.createElement('div');
     this.digitNote.className = 'panel-digit-note';
-    this.digitNote.textContent = '–';
-    this.panel.appendChild(this.digitNote);
+    this.digitNote.style.display = 'flex';
+    this.digitNote.style.alignItems = 'center';
+    this.digitNote.style.gap = '8px';
 
     this.digitDot = document.createElement('div');
     this.digitDot.className = 'panel-digit-dot';
-    this.panel.appendChild(this.digitDot);
+    this.digitNote.appendChild(this.digitDot);
+
+    const noteText = document.createElement('span');
+    noteText.className = 'panel-note-text';
+    noteText.textContent = '–';
+    this.digitNote.appendChild(noteText);
+    this.panel.appendChild(this.digitNote);
 
     this.tapeEl = document.createElement('div');
     this.tapeEl.className = 'panel-tape';
@@ -251,8 +258,11 @@ export class Panel {
     const noteLabel = isEn() ? `${noteBase}${octave}` : noteBase;
 
     this.digitBig.textContent = String(d);
-    this.digitBig.style.color = `var(--color-d${d})`;
-    this.digitNote.textContent = noteLabel;
+    this.digitBig.style.color = 'var(--ink)';
+    this.digitBig.style.textShadow = `0 0 24px var(--color-d${d})`;
+    // fallback for alpha
+    this.digitBig.style.setProperty('--glow', `var(--color-d${d})`);
+    this.digitNote.querySelector('.panel-note-text')!.textContent = noteLabel;
     this.digitDot.style.backgroundColor = `var(--color-d${d})`;
     this.digitDot.style.opacity = '1';
 
@@ -272,8 +282,8 @@ export class Panel {
       const isCurrent = i === chunk.length - 1;
       const d = chunk[i];
       const cls = isCurrent ? 'panel-tape-current' : 'panel-tape-digit';
-      const color = `var(--color-d${d})`;
-      parts.push(`<span class="${cls}" style="color:${color}">${d}</span>`);
+      const color = isCurrent ? 'var(--ink)' : 'var(--ink-dim)';
+      parts.push(`<span class="${cls}" style="color:${color}; opacity:${isCurrent ? 1 : 0.45}">${d}</span>`);
       if ((i + 1) % 5 === 0 && i < chunk.length - 1) parts.push('<span class="panel-tape-sep">·</span>');
     }
     this.tapeEl.innerHTML = parts.join(' ');
@@ -289,8 +299,12 @@ export class Panel {
       const bar = this.histBars[d];
       const h = this.histCounts[d] / max;
       bar.style.height = `${Math.max(6, h * 40)}px`;
-      bar.style.backgroundColor = `var(--color-d${d})`;
-      bar.style.opacity = '0.5';
+      if (d === this.currentDigit) {
+        bar.style.background = `var(--color-d${d})`;
+      } else {
+        bar.style.background = 'linear-gradient(var(--bar), transparent)';
+      }
+      bar.style.opacity = '1';
     }
   }
 
