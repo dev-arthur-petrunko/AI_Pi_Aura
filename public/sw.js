@@ -1,5 +1,5 @@
 ﻿/* Pi · Aura — minimal Service Worker: cache-first install + background update. */
-const CACHE = 'pi-aura-v3';
+const CACHE = 'pi-aura-' + (typeof __BUILD_ID__ !== 'undefined' ? __BUILD_ID__ : 'dev');
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

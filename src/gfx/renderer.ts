@@ -1,6 +1,7 @@
 /**
  * WebGL2-рендерер: вода (симуляция высоты) + дно с цифрами π.
  * - шейдеры: sim.frag.glsl, drop.frag.glsl, render.frag.glsl (через ?raw);
+ * - два шага симуляции за кадр, один рендер-проход;
  * - автоподстройка renderScale по времени кадра (0.5–1.0);
  * - если WebGL2 нет или нет float-текстур — mode = 'unavailable'.
  */
@@ -175,8 +176,10 @@ export class Renderer {
     const gap = this.lastRenderAt === 0 ? 16 : Math.min(250, now - this.lastRenderAt);
     this.lastRenderAt = now;
 
+    // два шага симуляции за кадр (как в образце)
     this.sim.stepTwice();
 
+    // обновляем текстуру пола каждый кадр (цифры пишутся на лету)
     this.updateFloorTexture();
 
     gl.useProgram(prog);
@@ -207,6 +210,11 @@ export class Renderer {
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     this.adapt(gap);
+  }
+
+  /** Подсветить плитку текущей цифры на дне. */
+  setActiveDigit(index: number): void {
+    this.floor.setActive(index);
   }
 
   addDrop(x: number, y: number, radius: number, strength: number): void {

@@ -17,3 +17,4 @@ p2.html
 scripts/
 preview*.log
 preview*.pid
+tmp-check/

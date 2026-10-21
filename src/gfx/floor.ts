@@ -16,10 +16,10 @@ export interface FloorConfig {
 }
 
 const DEFAULT: FloorConfig = {
-  cols: 12,
-  rows: 200,
-  tilePx: 64,
-  fontPx: 30,
+  cols: 16,
+  rows: 12,
+  tilePx: 80,
+  fontPx: 44,
 };
 
 /** Цвета цифр для дна (спокойные, как мыльный пузырь). */
@@ -95,35 +95,23 @@ export class Floor {
     this.draw();
   }
 
-  /** Перерисовать сетку плиток. */
+  /** Текущий flat-индекс цифры (строка × cols + колонка). */
+  flatIndex(row: number, col: number): number {
+    return row * this.cols + col;
+  }
+
+  /** Перерисовать сетку плиток (визуал как в образце reference-water.html). */
   private draw(): void {
     const c = this.ctx;
     const w = this.canvas.width;
     const h = this.canvas.height;
     const tile = this.tilePx;
 
-    // фон дна (цвет темы задаётся через CSS, но здесь нужно константное значение
-    // для текстуры — берём средний тон воды дна; шейдер может затонировать)
-    c.fillStyle = '#BFEAF2'; // tile-основа, будет перекрашена в шейдере по теме
+    // фон дна (нейтральный, шейдер затонирует по теме через uDay)
+    c.fillStyle = '#BFEAF2';
     c.fillRect(0, 0, w, h);
 
-    // швы плиток
-    c.strokeStyle = '#8FD2E0';
-    c.lineWidth = 2;
-    for (let col = 0; col <= this.cols; col++) {
-      c.beginPath();
-      c.moveTo(col * tile, 0);
-      c.lineTo(col * tile, h);
-      c.stroke();
-    }
-    for (let row = 0; row <= this.rows; row++) {
-      c.beginPath();
-      c.moveTo(0, row * tile);
-      c.lineTo(w, row * tile);
-      c.stroke();
-    }
-
-    // цифры
+    // цифры на плитках
     for (let row = 0; row < this.rows; row++) {
       const worldY = row * tile - this.scrollY;
       if (worldY < -tile || worldY > h + tile) continue;
@@ -135,27 +123,17 @@ export class Floor {
         const y = worldY + tile / 2;
         const isActive = this.activeIndex === flatIndex;
 
-        // мягкое свечение под текущей цифрой
-        if (isActive) {
-          const grad = c.createRadialGradient(x, y, 0, x, y, tile * 0.55);
-          grad.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
-          grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-          c.fillStyle = grad;
-          c.beginPath();
-          c.arc(x, y, tile * 0.55, 0, Math.PI * 2);
-          c.fill();
-        }
+        // оттенок плитки по хешу от индекса (как в образце)
+        const hv = Math.abs(Math.sin(flatIndex * 12.9898) * 43758.5453) % 1;
+        c.fillStyle = `hsl(190 ${55 + hv * 10}% ${61 + hv * 5}%)`;
+        c.fillRect(x + 2, y + 2, tile - 4, tile - 4);
 
+        // прозрачность цифры: сыгранные бледнее, текущая яркоо, будущие очень бледно
+        const a = flatIndex < this.activeIndex ? 0.34 : flatIndex === this.activeIndex ? 1 : 0.2;
         const [r, g, b] = FLOOR_PALETTE_RGB[digit];
-        c.fillStyle = isActive
-          ? `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(
-              b * 255,
-            )}, 0.95)`
-          : `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(
-              b * 255,
-            )}, 0.35)`;
+        c.fillStyle = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
         c.font = `${isActive ? 700 : 300} ${this.fontPx}px -apple-system, 'SF Pro Display', Inter, system-ui, sans-serif`;
-        c.fillText(String(digit), x, y);
+        c.fillText(String(digit), x, y + 2);
       }
     }
   }

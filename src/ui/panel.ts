@@ -16,6 +16,7 @@ const SOUND = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="
 
 const BREAKPOINT = 900;
 const HISTORY_LIMIT = 200;
+const FEYNMAN_INDEX = 762 - 1; // индекс (с 0) начала «999999»
 
 const DIGIT_NOTES: Record<number, string> = {
   0: 'До', 1: 'Ре', 2: 'Мі', 3: 'Соль', 4: 'Ля',
@@ -46,6 +47,7 @@ export class Panel {
   private soundBtn: HTMLElement;
   private langBtn: HTMLElement;
   private verEl: HTMLElement;
+  private introEl: HTMLElement;
   private theme: 'day' | 'night' = 'day';
 
   private history: number[] = [];
@@ -148,6 +150,27 @@ export class Panel {
     this.verEl.className = 'panel-ver';
     this.verEl.textContent = `v2 · ${BUILD_ID}`;
     this.footer.appendChild(this.verEl);
+
+    // подсказка первого касания (стеклянная капсула, как в образце)
+    this.introEl = document.createElement('div');
+    this.introEl.id = 'intro';
+    this.introEl.textContent = t('intro.touch');
+    this.introEl.style.position = 'fixed';
+    this.introEl.style.left = 'calc(50% + 172px)';
+    this.introEl.style.top = '50%';
+    this.introEl.style.transform = 'translate(-50%,-50%)';
+    this.introEl.style.padding = '14px 24px';
+    this.introEl.style.borderRadius = '999px';
+    this.introEl.style.background = 'var(--glass)';
+    this.introEl.style.border = '1px solid var(--glass-border)';
+    this.introEl.style.backdropFilter = 'blur(20px)';
+
+    this.introEl.style.fontSize = '15px';
+    this.introEl.style.letterSpacing = '0.02em';
+    this.introEl.style.transition = 'opacity 1s';
+    this.introEl.style.pointerEvents = 'none';
+    this.introEl.style.zIndex = '20';
+    document.body.appendChild(this.introEl);
 
     this.setLayout(window.innerWidth);
     window.addEventListener('resize', () => this.setLayout(window.innerWidth));
@@ -283,27 +306,91 @@ export class Panel {
     }
   }
 
-  private renderText(): void {
-    this.subEl.textContent = t('title.sub');
-    const saveBtn = this.footer.querySelector('.panel-btn:nth-child(2)') as HTMLElement;
-    const menuBtn = this.footer.querySelector('.panel-btn:nth-child(3)') as HTMLElement;
-    if (saveBtn) saveBtn.textContent = t('menu.save');
-    if (menuBtn) menuBtn.textContent = t('menu.close');
-    this.renderCounter(this.currentDigit, this.currentIndex);
-    this.renderFeynman(this.currentIndex);
-  }
-
   setTheme(theme: 'day' | 'night'): void {
     const root = document.documentElement;
     root.setAttribute('data-theme', theme);
     this.themeBtn.innerHTML = theme === 'day' ? MOON : SUN;
+    this.theme = theme;
   }
 
-  flashFeynman(active: boolean): void {
-    this.feynmanEl.style.opacity = active ? '1' : '0.6';
+  /** Скрыть подсказку первого касания. */
+  hideIntro(): void {
+    this.introEl.style.opacity = '0';
+  }
+
+  /** Новая цифра сыграна (публичный alias для update). */
+  addDigit(digit: number, index: number, future: number[]): void {
+    this.update(digit, index, future);
+  }
+
+  /** Отсчёт до точки Фейнмана (оставшееся количество цифр). */
+  setFeynman(remaining: number): void {
+    if (remaining <= 0) {
+      this.feynmanEl.textContent = t('panel.feynmanDone');
+      this.feynmanEl.style.opacity = '0.6';
+      return;
+    }
+    this.feynmanEl.textContent = t('panel.feynmanIn', { n: formatNum(remaining) });
+    this.feynmanEl.style.opacity = '1';
+  }
+
+  /** Точка Фейнмана пройдена. */
+  setFeynmanDone(): void {
+    this.feynmanEl.textContent = t('panel.feynmanDone');
+    this.feynmanEl.style.opacity = '0.6';
+  }
+
+  /** Метка заморозки (последние цифры или null). */
+  setFreezeLabel(digits: number[] | null): void {
+    if (!digits) {
+      this.feynmanEl.style.opacity = '0.6';
+      return;
+    }
+    this.feynmanEl.textContent = `${t('gesture.freeze')}: ${digits.join(' · ')}`;
+    this.feynmanEl.style.opacity = '1';
+  }
+
+  /** Обновить подпись скорости в UI. */
+  setSpeedUi(v: number): void {
+    const label = this.footer.querySelector('.panel-speed-val');
+    if (label) label.textContent = `${Math.round(v * 100) / 100}×`;
+  }
+
+  /** Перерисовать текстовые элементы при смене языка. */
+  renderText(): void {
+    this.subEl.textContent = t('title.sub');
+    this.introEl.textContent = t('intro.touch');
+    const saveBtn = this.footer.querySelector('.panel-btn:nth-child(2)') as HTMLElement;
+    const menuBtn = this.footer.querySelector('.panel-btn:nth-child(3)') as HTMLElement;
+    if (saveBtn) saveBtn.textContent = t('menu.save');
+    if (menuBtn) menuBtn.textContent = t('menu.close');
+    this.langBtn.textContent = getLang() === 'uk' ? 'УКР' : 'ENG';
+    this.themeBtn.setAttribute('aria-label', t('theme.day'));
+    this.soundBtn.setAttribute('aria-label', t('menu.sound'));
+    this.langBtn.setAttribute('aria-label', t('menu.language'));
+    this.renderCounter(this.currentDigit, this.currentIndex);
+    this.renderFeynman(this.currentIndex);
+  }
+
+  /** Сброс состояния («Начать сначала»). */
+  reset(): void {
+    this.currentDigit = -1;
+    this.currentIndex = -1;
+    this.history = [];
+    this.histCounts.fill(0);
+    this.digitBig.textContent = 'π';
+    this.digitBig.style.color = 'var(--ink)';
+    this.digitNote.textContent = '–';
+    this.digitDot.style.opacity = '0';
+    this.tapeEl.innerHTML = '';
+    this.renderCounter(-1, -1);
+    this.renderHistogram();
+    this.feynmanEl.textContent = t('panel.feynmanIn', { n: formatNum(FEYNMAN_INDEX + 1) });
+    this.feynmanEl.style.opacity = '1';
   }
 
   dispose(): void {
+    this.introEl.remove();
     this.panel.remove();
   }
 }
