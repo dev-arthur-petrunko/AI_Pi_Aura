@@ -234,7 +234,7 @@ export class DateDialog {
       const s = await loadMillion();
       (window as any).__piMillion = s;
       (window as any).__setMillion?.(s);
-      const hits = findAll(s, parts, getLang(), 6);
+      const hits = findAll(s, parts, getLang(), 1);
       if (hits.length === 0) {
         this.state = 'notfound';
         this.hits = [];
