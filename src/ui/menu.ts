@@ -168,9 +168,9 @@ export class Menu {
 
       <div class="menu-group">
         <span class="menu-label" id="lb-lang">${t('menu.language')}</span>
-        <div class="segment" role="radiogroup" aria-labelledby="lb-lang">
-          <button class="segment__btn ${lang === 'uk' ? 'is-active' : ''}" data-lang="uk" role="radio" aria-checked="${lang === 'uk'}">УКР</button>
-          <button class="segment__btn ${lang === 'en' ? 'is-active' : ''}" data-lang="en" role="radio" aria-checked="${lang === 'en'}">ENG</button>
+        <div class="menu-seg" role="radiogroup" aria-labelledby="lb-lang">
+          <button class="${lang === 'uk' ? 'active' : ''}" data-lang="uk" role="radio" aria-checked="${lang === 'uk'}">УКР</button>
+          <button class="${lang === 'en' ? 'active' : ''}" data-lang="en" role="radio" aria-checked="${lang === 'en'}">ENG</button>
         </div>
       </div>
 
@@ -178,38 +178,38 @@ export class Menu {
         <span class="menu-label" id="lb-sound">${t('menu.sound')}</span>
         <div class="menu-row">
           <button class="icon-btn" id="btn-mute" aria-label="${t('menu.sound')}" aria-pressed="${s.muted}">${s.muted ? '🔇' : '🔊'}</button>
-          <input type="range" id="volume" min="0" max="100" value="${Math.round(s.volume * 100)}" aria-labelledby="lb-sound" />
+          <input type="range" id="volume" class="menu-slider" min="0" max="100" value="${Math.round(s.volume * 100)}" aria-labelledby="lb-sound" />
         </div>
       </div>
 
       <div class="menu-group">
         <span class="menu-label" id="lb-scale">${t('menu.scale')}</span>
-        <div class="segment" role="radiogroup" aria-labelledby="lb-scale">
-          <button class="segment__btn ${s.scale === 'major' ? 'is-active' : ''}" data-scale="major" role="radio" aria-checked="${s.scale === 'major'}">${t('menu.scale.major')}</button>
-          <button class="segment__btn ${s.scale === 'minor' ? 'is-active' : ''}" data-scale="minor" role="radio" aria-checked="${s.scale === 'minor'}">${t('menu.scale.minor')}</button>
+        <div class="menu-seg" role="radiogroup" aria-labelledby="lb-scale">
+          <button class="${s.scale === 'major' ? 'active' : ''}" data-scale="major" role="radio" aria-checked="${s.scale === 'major'}">${t('menu.scale.major')}</button>
+          <button class="${s.scale === 'minor' ? 'active' : ''}" data-scale="minor" role="radio" aria-checked="${s.scale === 'minor'}">${t('menu.scale.minor')}</button>
         </div>
       </div>
 
       <div class="menu-group">
         <span class="menu-label" id="lb-theme">${t('menu.theme')}</span>
-        <div class="segment" role="radiogroup" aria-labelledby="lb-theme">
-          <button class="segment__btn ${s.theme === 'day' ? 'is-active' : ''}" data-theme="day" role="radio" aria-checked="${s.theme === 'day'}">${t('menu.theme.day')}</button>
-          <button class="segment__btn ${s.theme === 'night' ? 'is-active' : ''}" data-theme="night" role="radio" aria-checked="${s.theme === 'night'}">${t('menu.theme.night')}</button>
+        <div class="menu-seg" role="radiogroup" aria-labelledby="lb-theme">
+          <button class="${s.theme === 'day' ? 'active' : ''}" data-theme="day" role="radio" aria-checked="${s.theme === 'day'}">${t('menu.theme.day')}</button>
+          <button class="${s.theme === 'night' ? 'active' : ''}" data-theme="night" role="radio" aria-checked="${s.theme === 'night'}">${t('menu.theme.night')}</button>
         </div>
       </div>
 
       <div class="menu-group">
         <span class="menu-label" id="lb-speed">${t('menu.speed')} · <span id="speed-val">${speedLabel(s.speed)}</span></span>
-        <input type="range" id="speed" min="50" max="200" step="25" value="${Math.round(s.speed * 100)}" aria-labelledby="lb-speed" />
+        <input type="range" id="speed" class="menu-slider" min="50" max="200" step="25" value="${Math.round(s.speed * 100)}" aria-labelledby="lb-speed" />
       </div>
 
-      <div class="menu-actions">
-        <button class="text-btn" id="btn-save">${t('menu.save')}</button>
-        <details class="about">
-          <summary class="text-btn" id="btn-about">${t('menu.about')}</summary>
+      <div class="menu-btn-row">
+        <button class="menu-action-btn" id="btn-save">${t('menu.save')}</button>
+        <details class="menu-about">
+          <summary class="menu-action-btn" id="btn-about">${t('menu.about')}</summary>
           <p class="about-text">${t('about.text')}</p>
         </details>
-        <button class="text-btn text-btn--danger" id="btn-restart">${t('menu.restart')}</button>
+        <button class="menu-action-btn menu-action-btn--danger" id="btn-restart">${t('menu.restart')}</button>
       </div>
 
       <button class="menu-close" id="btn-close" aria-label="${t('menu.close')}">${t('menu.close')}</button>
@@ -238,6 +238,7 @@ export class Menu {
         this.state.scale = sc;
         storeSet(STORE.scale, sc);
         this.actions.onScale(sc);
+        this.render();
       }),
     );
 
@@ -319,7 +320,7 @@ export class Menu {
     this.state.theme = t;
     this.sheet.querySelectorAll<HTMLButtonElement>('[data-theme]').forEach((b) => {
       const active = b.dataset.theme === t;
-      b.classList.toggle('is-active', active);
+      b.classList.toggle('active', active);
       b.setAttribute('aria-checked', String(active));
     });
   }

@@ -249,13 +249,15 @@ html, body {
   text-align: center; flex: 1;
 }
 .menu-action-btn:hover { background: rgba(255,255,255,0.3); }
+.icon-btn { all: unset; cursor: pointer; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.18); font-size: 16px; color: var(--ink); }
+.menu-action-btn--danger { background: rgba(220, 60, 60, 0.18); }
 
 .menu-about {
   font-size: 13px; color: var(--ink-dim); line-height: 1.5;
   max-height: 0; overflow: hidden;
   transition: max-height 0.3s var(--ease);
 }
-.menu-about.is-open { max-height: 200px; }
+.menu-about[open] { max-height: 200px; }
 
 .menu-footer {
   margin-top: auto; padding-top: 12px;

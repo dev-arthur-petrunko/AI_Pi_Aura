@@ -162,6 +162,8 @@ const menu = new Menu(app, state, {
   onTheme: (t) => {
     theme = t;
     panel.setTheme(t);
+    renderer.setTheme(t);
+    menu.setThemeUi(t);
   },
   onSave: () => {
     void saveMoment(canvas, renderFrameNow, Math.max(0, stream.index - 1));
