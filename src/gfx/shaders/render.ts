@@ -34,6 +34,10 @@ void main(){
   float sp=pow(max(dot(reflect(-Ld,N),vec3(0,1,0)),0.),70.);
   float fr=pow(1.-N.y,1.6);
   c=mix(c,mix(vec3(.25,.6,.75),vec3(.93,.99,1.),day),fr*.55)+sp*.9;
+  // Bioluminescence (night only): glow where water is disturbed
+  float bio = (abs(s.g) + abs(s.r)) * 1.5;
+  vec3 bioColor = vec3(0.498, 0.941, 1.0);
+  c += bioColor * bio * (1.0 - day) * 0.4;
   c=min(c,vec3(.95))+sp*.9;
   c*=1.-.44*dot(v-.5,v-.5);
   o=vec4(c,1);
