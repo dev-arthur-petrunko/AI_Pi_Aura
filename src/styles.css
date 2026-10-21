@@ -263,4 +263,14 @@ html, body {
   font-size: 11px; color: var(--ink-dim);
 }
 #intro { position: fixed; left: calc(50% + 172px); top: 50%; transform: translate(-50%,-50%); padding: 14px 24px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-size: 15px; letter-spacing: 0.02em; transition: opacity 1s; pointer-events: none; }
+
 @media (max-width: 899px) { #intro { left: 50%; } }
+
+/* ---------- Режим покоя ---------- */
+body.rest-mode .panel,
+body.rest-mode #menu-sheet,
+body.rest-mode #menu-backdrop {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.8s var(--ease);
+}

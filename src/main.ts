@@ -192,6 +192,7 @@ function renderFrameNow(): void {
 /** Один кадр анимации. */
 function frame(now: number): void {
   requestAnimationFrame(frame);
+  restCheck();
 
   if (!started) {
     // тихие случайные капли до первого касания
@@ -269,5 +270,51 @@ if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.st
   });
 }
 
+// E4: ссылка на позицию #d=N
+try {
+  const hash = window.location.hash;
+  const m = hash.match(/#d=(\d+)/);
+  if (m) {
+    const pos = parseInt(m[1], 10);
+    if (Number.isFinite(pos) && pos >= 0) {
+      stream.seek(pos);
+      idx = pos;
+    }
+  }
+} catch { /* ignore */ }
+
+// E1: режим покоя
+let lastInteraction = performance.now();
+let restMode = false;
+function setRestMode(on: boolean): void {
+  restMode = on;
+  document.body.classList.toggle('rest-mode', on);
+}
+function markInteraction(): void {
+  lastInteraction = performance.now();
+  if (restMode) setRestMode(false);
+}
+
+const restCheck = (): void => {
+  if (performance.now() - lastInteraction > 6000 && !restMode) {
+    setRestMode(true);
+  }
+};
+document.addEventListener('pointermove', markInteraction, { passive: true });
+document.addEventListener('pointerdown', markInteraction, { passive: true });
+document.addEventListener('keydown', markInteraction);
+
+// Fullscreen API (F key)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'f' || e.key === 'F') {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+    }
+  }
+});
+
 // старт цикла
 requestAnimationFrame(frame);
+

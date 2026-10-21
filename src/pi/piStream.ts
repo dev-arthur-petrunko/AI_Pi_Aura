@@ -189,7 +189,18 @@ export class PiStream {
     }
   }
 
-  /** Форсированное сохранение (pagehide / visibilitychange). */
+  /** Перейти к позиции N (цифра N, 0-based index в потоке). */
+  seek(to: number): void {
+    this.buffer = [];
+    this.consumed = Math.max(0, to);
+    this.savedUpTo = this.consumed;
+    this.skipLeft = 0;
+    if (this.worker) {
+      this.worker.postMessage({ type: 'start', from: this.consumed });
+    } else {
+      this.useMainThread(this.consumed);
+    }
+  }
   flush(): void {
     storageSet(STORE_KEY, String(this.consumed));
     this.savedUpTo = this.consumed;
