@@ -48,7 +48,7 @@ try {
 } catch { /* ignore */ }
 document.documentElement.setAttribute('data-theme', theme);
 panel.setTheme(theme);
-panel.onThemeChange = (t) => { theme = t; };
+panel.onThemeChange = (t) => { theme = t; menu.setThemeUi(t); };
 
 let speed = state.speed;
 let started = false;
@@ -140,6 +140,11 @@ const menu = new Menu(app, state, {
   onScale: (s) => engine.setScale(s),
   onSpeed: (s) => {
     speed = s;
+    panel.setSpeedUi(s);
+  },
+  onTheme: (t) => {
+    theme = t;
+    panel.setTheme(t);
   },
   onSave: () => {
     void saveMoment(canvas, renderFrameNow, Math.max(0, stream.index - 1));

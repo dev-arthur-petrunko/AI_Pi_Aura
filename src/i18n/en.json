@@ -26,13 +26,15 @@
   "note.E": "E",
   "note.G": "G",
   "note.A": "A",
-  "drum.number": "№ {n}"
-,
+  "drum.number": "№ {n}",
   "title.sub": "The endless melody of water",
   "panel.digitOf": "digit {n} of ∞",
   "panel.hist": "Which digits have appeared",
   "panel.feynmanIn": "{n} digits to the Feynman point",
   "panel.feynmanDone": "Feynman point passed",
   "theme.day": "Theme",
-  "theme.night": "Night"
+  "theme.night": "Night",
+  "menu.theme": "Theme",
+  "menu.theme.day": "Day",
+  "menu.theme.night": "Night"
 }

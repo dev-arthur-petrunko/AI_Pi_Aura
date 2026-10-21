@@ -26,13 +26,15 @@
   "note.E": "Мі",
   "note.G": "Соль",
   "note.A": "Ля",
-  "drum.number": "№ {n}"
-,
+  "drum.number": "№ {n}",
   "title.sub": "Нескінченна мелодія води",
   "panel.digitOf": "цифра {n} з ∞",
   "panel.hist": "Які цифри вже випали",
   "panel.feynmanIn": "До точки Фейнмана: {n} цифр",
   "panel.feynmanDone": "Точку Фейнмана пройдено",
   "theme.day": "Тема",
-  "theme.night": "Ніч"
+  "theme.night": "Ніч",
+  "menu.theme": "Тема",
+  "menu.theme.day": "День",
+  "menu.theme.night": "Ніч"
 }

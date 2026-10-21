@@ -11,6 +11,7 @@ export interface MenuState {
   muted: boolean;
   scale: ScaleId;
   speed: number;
+  theme: 'day' | 'night';
 }
 
 export interface MenuActions {
@@ -18,6 +19,7 @@ export interface MenuActions {
   onMute(m: boolean): void;
   onScale(s: ScaleId): void;
   onSpeed(s: number): void;
+  onTheme(t: 'day' | 'night'): void;
   onSave(): void;
   onRestart(): void;
   onLang(l: Lang): void;
@@ -53,11 +55,13 @@ export function loadState(): MenuState {
     const v = parseFloat(raw);
     return Number.isFinite(v) ? v : d;
   };
+  const storedTheme = storeGet('pi.theme');
   return {
     volume: Math.min(1, Math.max(0, num(STORE.volume, 0.8))),
     muted: storeGet(STORE.muted) === '1',
     scale: storeGet(STORE.scale) === 'minor' ? 'minor' : 'major',
     speed: Math.min(2, Math.max(0.5, num(STORE.speed, 1))),
+    theme: storedTheme === 'night' ? 'night' : 'day',
   };
 }
 
@@ -187,6 +191,14 @@ export class Menu {
       </div>
 
       <div class="menu-group">
+        <span class="menu-label" id="lb-theme">${t('menu.theme')}</span>
+        <div class="segment" role="radiogroup" aria-labelledby="lb-theme">
+          <button class="segment__btn ${s.theme === 'day' ? 'is-active' : ''}" data-theme="day" role="radio" aria-checked="${s.theme === 'day'}">${t('menu.theme.day')}</button>
+          <button class="segment__btn ${s.theme === 'night' ? 'is-active' : ''}" data-theme="night" role="radio" aria-checked="${s.theme === 'night'}">${t('menu.theme.night')}</button>
+        </div>
+      </div>
+
+      <div class="menu-group">
         <span class="menu-label" id="lb-speed">${t('menu.speed')} · <span id="speed-val">${speedLabel(s.speed)}</span></span>
         <input type="range" id="speed" min="50" max="200" step="25" value="${Math.round(s.speed * 100)}" aria-labelledby="lb-speed" />
       </div>
@@ -228,6 +240,16 @@ export class Menu {
         this.actions.onScale(sc);
       }),
     );
+
+    this.sheet.querySelectorAll<HTMLButtonElement>('[data-theme]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const th = b.dataset.theme as 'day' | 'night';
+        this.state.theme = th;
+        storeSet('pi.theme', th);
+        this.actions.onTheme(th);
+        this.render();
+      });
+    });
 
     const vol = q<HTMLInputElement>('#volume');
     vol?.addEventListener('input', () => {
@@ -290,6 +312,16 @@ export class Menu {
     if (label) label.textContent = speedLabel(v);
     const input = this.sheet.querySelector<HTMLInputElement>('#speed');
     if (input) input.value = String(Math.round(v * 100));
+  }
+
+  /** Обновить UI темы (вызов извне). */
+  setThemeUi(t: 'day' | 'night'): void {
+    this.state.theme = t;
+    this.sheet.querySelectorAll<HTMLButtonElement>('[data-theme]').forEach((b) => {
+      const active = b.dataset.theme === t;
+      b.classList.toggle('is-active', active);
+      b.setAttribute('aria-checked', String(active));
+    });
   }
 
   dispose(): void {
