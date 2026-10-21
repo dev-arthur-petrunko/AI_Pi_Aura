@@ -282,6 +282,60 @@ npm test             # vitest run
 
 ---
 
+
 ## 10. Скрипты в корне (артефакты отладки, не часть исходников)
+
+Неиндексированные файлы (`lh-*.json`, `p1.html`, `p2.html`, `scripts/*.mjs`, `preview.log`) — результаты запуска Lighthouse и приёмочных сценариев. Не входят в сборку `dist/`.
+
+---
+
+## 11. История изменений (последние сессии)
+
+### 11.1 Вода и шейдеры (B1–B3)
+
+- **`render.ts`** (fragment shader): каустика тоньше (pow 11), яркость снижена (.16), вода темнее, глубина .7, лимит «молока» (min .95), преломление .05, sea tint.
+- **`floor.ts`**: шов 3 px (#3E9DB5), плитка hsl(190 55–65% 56–62%), цифры 48 px rgba(6,60,95,a), текущая плитка с обводкой 3 px.
+- **`renderer.ts`**: uLoc uniform locations заполнены, sc добавлен в FrameParams, загрузка цифр дна, поддержка `?theme=` параметра.
+- **Биолюминесценция (E3)**: ночной glow в render shader от `abs(скорость) + abs(высота)`, цвет #7FF0FF.
+
+### 11.2 Панель (C)
+
+- Текст цветом `--ink` вместо палитры цифр.
+- Лента цифр: `nowrap` + mask по краям.
+- Точка слева от ноты (flex row, gap 8px).
+- Цифра 96 px, жирная.
+- Гистограмма с градиентом `--bar`.
+- Метки гистограммы 11 px uppercase.
+
+### 11.3 Меню (D)
+
+- Полный CSS: backdrop, glass sheet (side/bottom), iOS-стиль слайдеры и сегменты, анимация 500 мс.
+- Переключатель темы (День/Ночь) добавлен в меню как сегмент.
+- Синхронизация UI темы и скорости между панелью и меню.
+
+### 11.4 Новые функции (E)
+
+- **E1 (Режим покоя)**: через 6 секунд без движения панель/меню исчезают; возврат по движению; fullscreen по клавише F.
+- **E3 (Биолюминесценция)**: ночной glow в шейдере.
+- **E4 (Ссылка на позицию)**: `#d=N` в URL, метод `seek()` в PiStream, кнопка копирования ссылки в футере панели.
+
+### 11.5 Коммиты (последние)
+
+| Коммит | Описание |
+|---|---|
+| `cfc1b07` | water color (B1), floor tiles (B2), menu CSS (D) |
+| `efb3553` | panel design (C) — ink colors, tape nowrap, note+dot flex, 96px digit |
+| `11f4fad` | E1 rest mode + E4 position link (#d=N) |
+| `beead55` | E3 bioluminescent night in render shader |
+| `f84eeb7` | E4 copy link button in panel footer |
+| `9b80eb9` | wire dark theme toggle (panel) + sync speed UI |
+| `cd6f3bf` | add theme toggle to menu (Day/Night) |
+
+### 11.6 Статус проверок
+
+- `tsc --noEmit` ✅ чисто
+- `npm test` ✅ 22/22 зелёные
+- `npm run build` ✅ успешно
+- Версия: `v2 · cd6f3bf`
 
 Неиндексированные файлы (`lh-*.json`, `p1.html`, `p2.html`, `scripts/*.mjs`, `preview.log`) — результаты запуска Lighthouse и приёмочных сценариев. Не входят в сборку `dist/`.
