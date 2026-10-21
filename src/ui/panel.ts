@@ -46,6 +46,7 @@ export class Panel {
   private themeBtn: HTMLElement;
   private soundBtn: HTMLElement;
   private langBtn: HTMLElement;
+  private copyLinkBtn: HTMLElement;
   private verEl: HTMLElement;
   private introEl: HTMLElement;
   private theme: 'day' | 'night' = 'day';
@@ -152,6 +153,19 @@ export class Panel {
     this.langBtn.textContent = getLang() === 'uk' ? 'УКР' : 'ENG';
     this.langBtn.setAttribute('aria-label', t('menu.language'));
     this.footer.appendChild(this.langBtn);
+
+    // E4: copy link button
+    this.copyLinkBtn = document.createElement('button');
+    this.copyLinkBtn.className = 'panel-btn';
+    this.copyLinkBtn.textContent = '🔗';
+    this.copyLinkBtn.setAttribute('aria-label', 'Copy link');
+    this.copyLinkBtn.addEventListener('click', () => {
+      const url = `${window.location.origin}${window.location.pathname}#d=${this.currentIndex}`;
+      try {
+        navigator.clipboard?.writeText(url);
+      } catch { /* ignore */ }
+    });
+    this.footer.appendChild(this.copyLinkBtn);
 
     this.verEl = document.createElement('span');
     this.verEl.className = 'panel-ver';
