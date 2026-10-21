@@ -10,6 +10,6 @@ export default defineConfig({
     format: 'es',
   },
   define: {
-    __BUILD_ID__: JSON.stringify(process.env.VITE_BUILD_ID ?? 'dev'),
+    __BUILD_ID__: JSON.stringify(process.env.VITE_BUILD_ID || 'dev'),
   },
 });

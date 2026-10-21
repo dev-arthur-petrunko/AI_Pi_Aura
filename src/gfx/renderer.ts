@@ -15,6 +15,7 @@ const vertexSrc = fullscreenVert;
 
 export interface FrameParams {
   time: number;
+  sc: number;
   light: [number, number, number];
   sky: [number, number, number];
   waterDeep: [number, number, number];
@@ -98,6 +99,15 @@ export class Renderer {
       return;
     }
 
+    // floor texture: 16x12 tiles, 80px each = 1280x960
+    this.floorTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.floorTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, this.floor.textureWidth, this.floor.textureHeight, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.floor.canvas);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
     const compile = (type: number, src: string): WebGLShader | null => {
       const sh = gl.createShader(type);
       if (!sh) return null;
@@ -127,6 +137,11 @@ export class Renderer {
       console.error('render link:', gl.getProgramInfoLog(this.program));
       this.stats.mode = 'unavailable';
       return;
+    }
+
+    // uniform locations
+    for (const name of ['S', 'F', 'res', 'ct', 't', 'sc', 'day', 'fl', 'fc']) {
+      this.uLoc[name] = gl.getUniformLocation(this.program!, name);
     }
 
     const w = Math.round(Math.min(480, Math.max(180, 180 * (this.canvas.width / this.canvas.height))));
@@ -186,25 +201,25 @@ export class Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
 
+    // очищаем цветовое буфферирование перед рендера
+    gl.clearColor(params.sky[0], params.sky[1], params.sky[2], 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.sim.getStateTexture()!);
-    gl.uniform1i(this.uLoc.uState!, 0);
+    gl.uniform1i(this.uLoc.S!, 0);
 
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.floorTexture);
-    gl.uniform1i(this.uLoc.uFloor!, 1);
+    gl.uniform1i(this.uLoc.F!, 1);
 
-    gl.uniform2f(this.uLoc.uRes!, this.canvas.width, this.canvas.height);
-    gl.uniform2f(this.uLoc.uFloorSize!, this.floor.textureWidth, this.floor.textureHeight);
-    gl.uniform1f(this.uLoc.uTime!, params.time);
-    gl.uniform1f(this.uLoc.uPerturb!, params.perturb);
-    gl.uniform3fv(this.uLoc.uLight!, params.light);
-    gl.uniform3fv(this.uLoc.uSky!, params.sky);
-    gl.uniform3fv(this.uLoc.uWaterDeep!, params.waterDeep);
-    gl.uniform1f(this.uLoc.uDay!, params.day);
-    gl.uniform1f(this.uLoc.uFlash!, params.flash);
-    gl.uniform3fv(this.uLoc.uFlashColor!, params.flashColor);
-    gl.uniform2f(this.uLoc.uFlashCenter!, params.flashCenter[0], params.flashCenter[1]);
+    gl.uniform2f(this.uLoc.res!, this.canvas.width, this.canvas.height);
+    gl.uniform1f(this.uLoc.t!, params.time);
+    gl.uniform1f(this.uLoc.sc!, params.sc);
+    gl.uniform1f(this.uLoc.day!, params.day);
+    gl.uniform1f(this.uLoc.fl!, params.flash);
+    gl.uniform3fv(this.uLoc.fc!, params.flashColor);
+    gl.uniform2f(this.uLoc.ct!, params.flashCenter[0], params.flashCenter[1]);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindTexture(gl.TEXTURE_2D, null);

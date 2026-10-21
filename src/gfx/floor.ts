@@ -57,6 +57,8 @@ export class Floor {
   private activeIndex = -1;
   /** Смещение сетки по Y (пиксели), для прокрутки вглубь. */
   private scrollY = 0;
+  /** Стартовый индекс цифр в массиве digits. */
+  private digitStart = 0;
 
   constructor(cfg: Partial<FloorConfig> = {}) {
     const c = { ...DEFAULT, ...cfg };
@@ -74,11 +76,12 @@ export class Floor {
 
     this.ctx.textBaseline = 'middle';
     this.ctx.textAlign = 'center';
-    this.draw();
+    this.loadDigits(0, this.cols * this.rows);
   }
 
   /** Загрузить цифры π начиная с индекса `from` (0 = «3»). */
   loadDigits(from = 0, count = this.cols * this.rows): void {
+    this.digitStart = from;
     this.digits = piSlice(from, count);
     this.draw();
   }
@@ -86,7 +89,10 @@ export class Floor {
   /** Подсветить плитку текущей цифры (по индексу в потоке). */
   setActive(index: number): void {
     this.activeIndex = index;
-    this.draw();
+    // Загрузить цифры π вокруг текущего индекса (как в образце: r0 = floor(idx/cols) - 4)
+    const row = Math.floor(index / this.cols);
+    const from = Math.max(0, row - 4) * this.cols;
+    this.loadDigits(from, this.cols * this.rows);
   }
 
   /** Сместить сетку вглубь (положительное = ближе к viewer, отрицательное = уходит). */
@@ -119,17 +125,18 @@ export class Floor {
         const flatIndex = row * this.cols + col;
         const digit = this.digits[flatIndex];
         if (digit === undefined) continue;
-        const x = col * tile + tile / 2;
-        const y = worldY + tile / 2;
-        const isActive = this.activeIndex === flatIndex;
+        const x = col * this.tilePx + this.tilePx / 2;
+        const y = worldY + this.tilePx / 2;
+        const globalIndex = this.digitStart + flatIndex;
+        const isActive = this.activeIndex === globalIndex;
 
         // оттенок плитки по хешу от индекса (как в образце)
-        const hv = Math.abs(Math.sin(flatIndex * 12.9898) * 43758.5453) % 1;
+        const hv = Math.abs(Math.sin(globalIndex * 12.9898) * 43758.5453) % 1;
         c.fillStyle = `hsl(190 ${55 + hv * 10}% ${61 + hv * 5}%)`;
-        c.fillRect(x + 2, y + 2, tile - 4, tile - 4);
+        c.fillRect(x + 2, y + 2, this.tilePx - 4, this.tilePx - 4);
 
-        // прозрачность цифры: сыгранные бледнее, текущая яркоо, будущие очень бледно
-        const a = flatIndex < this.activeIndex ? 0.34 : flatIndex === this.activeIndex ? 1 : 0.2;
+        // прозрачность цифры: сыгранные бледнее, текущая ярко, будущие очень бледно
+        const a = globalIndex < this.activeIndex ? 0.34 : globalIndex === this.activeIndex ? 1 : 0.2;
         const [r, g, b] = FLOOR_PALETTE_RGB[digit];
         c.fillStyle = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
         c.font = `${isActive ? 700 : 300} ${this.fontPx}px -apple-system, 'SF Pro Display', Inter, system-ui, sans-serif`;

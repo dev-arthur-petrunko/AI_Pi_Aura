@@ -87,6 +87,14 @@ export class Sim {
     this.fbA = createFramebuffer(gl, this.texA);
     this.fbB = createFramebuffer(gl, this.texB);
 
+    // очистка от нулей перед первым шагом
+    for (const fb of [this.fbA, this.fbB]) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+      gl.clearColor(0, 0, 0, 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
     for (const name of ['uState', 'uTexel', 'uDamping', 'uWaveSpeed']) {
       this.uStep[name] = gl.getUniformLocation(this.stepProg, name);
     }

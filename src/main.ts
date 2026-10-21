@@ -37,8 +37,14 @@ engine.setMuted(state.muted);
 
 let theme: 'day' | 'night' = 'day';
 try {
-  const v = localStorage.getItem('pi.theme');
-  if (v === 'night') theme = 'night';
+  const params = new URLSearchParams(window.location.search);
+  const urlTheme = params.get('theme');
+  if (urlTheme === 'night' || urlTheme === 'day') {
+    theme = urlTheme;
+  } else {
+    const v = localStorage.getItem('pi.theme');
+    if (v === 'night') theme = 'night';
+  }
 } catch { /* ignore */ }
 document.documentElement.setAttribute('data-theme', theme);
 panel.setTheme(theme);
@@ -165,8 +171,13 @@ function renderFrameNow(): void {
   const waterDeep = [0.01, 0.10, 0.16] as [number, number, number];
   const flashColor = [1, 1, 1] as [number, number, number];
 
+  // sc = scroll offset for floor texture (reference formula)
+  const ph = started ? Math.min(1, (performance.now() - lastDigitTime) / (STEP_BASE / speed)) : 0;
+  const sc = (idx + ph) / 16 - Math.floor(idx / 16);
+
   renderer.render({
     time: performance.now() / 1000,
+    sc,
     light,
     sky,
     waterDeep,
