@@ -56,7 +56,7 @@ export class Renderer {
       typeof matchMedia === 'function' &&
       matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.scale = reduced ? 0.6 : 1;
-    this.floor = new Floor({ cols: 16, rows: 12, tilePx: 80, fontPx: 44 });
+    this.floor = new Floor({ cols: 16, rows: 12, tilePx: 80, fontPx: 48 });
     this.initGL();
     this.resize();
   }

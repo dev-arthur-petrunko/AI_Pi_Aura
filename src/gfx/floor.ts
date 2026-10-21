@@ -19,7 +19,7 @@ const DEFAULT: FloorConfig = {
   cols: 16,
   rows: 12,
   tilePx: 80,
-  fontPx: 44,
+  fontPx: 48,
 };
 
 /** Цвета цифр для дна (спокойные, как мыльный пузырь). */
@@ -114,7 +114,8 @@ export class Floor {
     const tile = this.tilePx;
 
     // фон дна (нейтральный, шейдер затонирует по теме через uDay)
-    c.fillStyle = '#BFEAF2';
+    // День: #6CC3D6 плитка, #3E9DB5 шов; Ночь: #04141F дно, #0F2E40 шов
+    c.fillStyle = '#3E9DB5'; // grout color (Day default)
     c.fillRect(0, 0, w, h);
 
     // цифры на плитках
@@ -132,15 +133,33 @@ export class Floor {
 
         // оттенок плитки по хешу от индекса (как в образце)
         const hv = Math.abs(Math.sin(globalIndex * 12.9898) * 43758.5453) % 1;
-        c.fillStyle = `hsl(190 ${55 + hv * 10}% ${61 + hv * 5}%)`;
-        c.fillRect(x + 2, y + 2, this.tilePx - 4, this.tilePx - 4);
+        // hsl(190 55-65% 56-62%) — темнее, чем было
+        const lightness = 56 + hv * 6;
+        const saturation = 55 + hv * 10;
+        c.fillStyle = `hsl(190 ${saturation}% ${lightness}%)`;
+        // отступ 3 px (было 2) — шов шире и темнее
+        c.fillRect(x + 3, y + 3, this.tilePx - 6, this.tilePx - 6);
 
-        // прозрачность цифры: сыгранные бледнее, текущая ярко, будущие очень бледно
-        const a = globalIndex < this.activeIndex ? 0.34 : globalIndex === this.activeIndex ? 1 : 0.2;
-        const [r, g, b] = FLOOR_PALETTE_RGB[digit];
-        c.fillStyle = `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},${a})`;
-        c.font = `${isActive ? 700 : 300} ${this.fontPx}px -apple-system, 'SF Pro Display', Inter, system-ui, sans-serif`;
+        // прозрачность цифры: сыгранные .5, будущие .32, текущая 1
+        const a =
+          globalIndex < this.activeIndex
+            ? 0.5
+            : globalIndex === this.activeIndex
+              ? 1
+              : 0.32;
+        // Цвет цифр: День rgba(6,60,95,a), Ночь rgba(170,240,255,a)
+        // Floor texture is theme-neutral; we use Day colors (shader tints by theme)
+        c.fillStyle = `rgba(6, 60, 95, ${a})`;
+        c.font = `300 ${this.fontPx}px -apple-system, 'SF Pro Display', Inter, system-ui, sans-serif`;
         c.fillText(String(digit), x, y + 2);
+
+        // Текущая плитка: цветная вспышка + тонкая светлая обводка
+        if (isActive) {
+          const [r, g, b] = FLOOR_PALETTE_RGB[digit];
+          c.strokeStyle = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, 0.9)`;
+          c.lineWidth = 3;
+          c.strokeRect(x + 3, y + 3, this.tilePx - 6, this.tilePx - 6);
+        }
       }
     }
   }
