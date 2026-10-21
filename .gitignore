@@ -9,7 +9,7 @@ shot-*.png
 .DS_Store
 .vite/
 .*.pid
-# отладочные артефакты (не часть проекта)
+# debug artifacts (not part of project)
 lh-*.json
 lh.json
 p1.html
