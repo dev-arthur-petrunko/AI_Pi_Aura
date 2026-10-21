@@ -48,6 +48,7 @@ try {
 } catch { /* ignore */ }
 document.documentElement.setAttribute('data-theme', theme);
 panel.setTheme(theme);
+panel.onThemeChange = (t) => { theme = t; };
 
 let speed = state.speed;
 let started = false;
@@ -129,6 +130,7 @@ function toggleFreeze(): void {
 function changeSpeed(delta: number): void {
   speed = Math.min(2, Math.max(0.5, Math.round((speed + delta) * 100) / 100));
   panel.setSpeedUi(speed);
+  menu.setSpeedUi(speed);
 }
 
 /** Меню и его действия. */

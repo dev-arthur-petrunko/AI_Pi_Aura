@@ -50,6 +50,7 @@ export class Panel {
   private verEl: HTMLElement;
   private introEl: HTMLElement;
   private theme: 'day' | 'night' = 'day';
+  public onThemeChange?: (theme: 'day' | 'night') => void;
 
   private history: number[] = [];
   private histCounts = new Array(10).fill(0);
@@ -140,6 +141,12 @@ export class Panel {
     this.themeBtn.className = 'panel-btn';
     this.themeBtn.innerHTML = this.theme === 'day' ? MOON : SUN;
     this.themeBtn.setAttribute('aria-label', t('theme.day'));
+    this.themeBtn.addEventListener('click', () => {
+      const next = this.theme === 'day' ? 'night' : 'day';
+      this.setTheme(next);
+      try { localStorage.setItem('pi.theme', next); } catch { /* ignore */ }
+      this.onThemeChange?.(next);
+    });
     this.footer.appendChild(this.themeBtn);
 
     this.soundBtn = document.createElement('button');
