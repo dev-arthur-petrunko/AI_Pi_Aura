@@ -8,6 +8,26 @@
  * Формулы позиции/силы/радиуса — из образца reference-water.html.
  */
 
+/**
+ * Чистая функция: позиция капли (в нормализованных координатах 0..1)
+ * на плитке текущей цифры. Капля падает на плитку, а не по высоте ноты.
+ * panelFrac — доля ширины экрана, занятая левой панелью (0..1).
+ * col — колонка текущей цифры (i % 16).
+ */
+export function tilePos(
+  i: number,
+  w: number,
+  h: number,
+  panelFrac: number,
+): { x: number; y: number } {
+  const z = Math.max(h / 9, w * (1 - panelFrac) / 16);
+  const col = i % 16;
+  return {
+    x: 0.5 + panelFrac / 2 + (col + 0.5 - 8) * z / w,
+    y: 0.58 + (col / 16) * z / h,
+  };
+}
+
 export const DROP_LIFETIME = 6.0;
 
 export function hashPos(i: number): { x: number; y: number } {
@@ -37,9 +57,7 @@ export function dropParams(
   repeat: boolean,
   panelFrac: number,
 ): { x: number; y: number; R: number; K: number } {
-  const pl = panelFrac; // доля экрана под панелью
-  const x = pl + (1 - pl) * (0.1 + 0.8 * (d / 9));
-  const y = 0.5 + 0.17 * Math.sin(idx * 0.7) + 0.08 * Math.sin(idx * 1.9);
+  const { x, y } = tilePos(idx, 1200, 800, panelFrac); // placeholder dims; real dims passed separately
   const R = 0.075 - 0.045 * (d / 9);
   const K = (0.026 - 0.012 * (d / 9)) * (repeat ? 1.8 : 1);
   return { x, y, R, K };

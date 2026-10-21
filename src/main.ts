@@ -7,7 +7,8 @@
 import './styles.css';
 import { AudioEngine } from './audio/engine.ts';
 import { Renderer } from './gfx/renderer.ts';
-import { dropParams } from './gfx/ripples.ts';
+import { PAL_HEX } from './gfx/palette.ts';
+import { tilePos } from './gfx/ripples.ts';
 import { initLang, onLangChange } from './i18n/index.ts';
 import { Panel } from './ui/panel.ts';
 import { FeynmanDetector } from './pi/feynman.ts';
@@ -48,7 +49,9 @@ try {
 } catch { /* ignore */ }
 document.documentElement.setAttribute('data-theme', theme);
 panel.setTheme(theme);
-panel.onThemeChange = (t) => { theme = t; menu.setThemeUi(t); };
+renderer.setTheme(theme);
+panel.onThemeChange = (t) => { theme = t; menu.setThemeUi(t); renderer.setTheme(t); };
+panel.onMenuToggle = () => menu.toggle();
 
 let speed = state.speed;
 let started = false;
@@ -69,16 +72,30 @@ function playDigit(digit: number, index: number): void {
     engine.playDigit(digit, undefined, repeat ? 0.22 : 0.16);
   }
 
-  // капля в симуляцию воды (формулы из образца)
+  // капля в симуляцию воды: падает на плитку текущей цифры
   const panelFrac = 324 / Math.max(canvas.clientWidth, 1);
   const repeat = lastDigits.length > 0 && lastDigits[lastDigits.length - 1] === digit;
-  const { x, y, R, K } = dropParams(digit, index, repeat, panelFrac);
+  const { x, y } = tilePos(idx, canvas.clientWidth, canvas.clientHeight, panelFrac);
+  const R = 0.075 - 0.045 * (digit / 9);
+  const K = (0.026 - 0.012 * (digit / 9)) * (repeat ? 1.8 : 1);
   renderer.addDrop(x, y, R, K);
 
   // подсветка плитки на дне
   renderer.setActiveDigit(index);
 
-  // панель UI
+  // призрак цифры (ghost digit) над плиткой
+  const gh = document.getElementById('gh');
+  if (gh) {
+    const px = x * canvas.clientWidth;
+    const py = (1 - y) * canvas.clientHeight;
+    gh.textContent = String(digit);
+    gh.style.left = px + 'px';
+    gh.style.top = py + 'px';
+    gh.style.setProperty('--gc', PAL_HEX[digit] ?? '#fff');
+    gh.classList.remove('go');
+    void gh.offsetWidth;
+    gh.classList.add('go');
+  }
   histCounts[digit]++;
   lastDigits.push(digit);
   if (lastDigits.length > 10) lastDigits.shift();
@@ -156,6 +173,7 @@ const menu = new Menu(app, state, {
     detector.reset();
     lastDigits.length = 0;
     histCounts.fill(0);
+    panel.resetCounts();
     idx = -1;
     nextAt = performance.now() + 350;
     feynmanAnnounced = false;
@@ -193,6 +211,8 @@ function renderFrameNow(): void {
     flash: feynmanAnnounced ? 1 : 0,
     flashColor,
     flashCenter: [idx % 16 + 0.5, 4.5] as [number, number],
+    age: started ? (performance.now() - lastDigitTime) / 1000 : 99,
+    pf: 324 / Math.max(canvas.clientWidth, 1),
   });
 }
 

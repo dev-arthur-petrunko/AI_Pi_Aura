@@ -264,6 +264,19 @@ html, body {
 }
 #intro { position: fixed; left: calc(50% + 172px); top: 50%; transform: translate(-50%,-50%); padding: 14px 24px; border-radius: 999px; background: var(--glass); border: 1px solid var(--glass-border); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); font-size: 15px; letter-spacing: 0.02em; transition: opacity 1s; pointer-events: none; }
 
+/* ---------- Призрак цифры (ghost digit) ---------- */
+#gh {
+  position: fixed; left: 0; top: 0;
+  transform: translate(-50%, -50%);
+  font-size: 150px; font-weight: 200; line-height: 1;
+  pointer-events: none; opacity: 0; color: #fff; z-index: 2;
+  text-shadow: 0 0 36px var(--gc, #fff), 0 0 8px var(--gc, #fff);
+}
+#gh.go { animation: gh 1.5s var(--ease); }
+@keyframes gh {
+  0% { opacity: 0.95; transform: translate(-50%, -50%) scale(0.7); filter: blur(0); }
+  100% { opacity: 0; transform: translate(-50%, -85%) scale(1.8); filter: blur(10px); }
+}
 @media (max-width: 899px) { #intro { left: 50%; } }
 
 /* ---------- Режим покоя ---------- */

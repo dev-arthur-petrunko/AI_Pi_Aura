@@ -24,6 +24,8 @@ export interface FrameParams {
   flash: number;
   flashColor: [number, number, number];
   flashCenter: [number, number];
+  age: number;
+  pf: number;
 }
 
 export interface RendererStats {
@@ -140,7 +142,7 @@ export class Renderer {
     }
 
     // uniform locations
-    for (const name of ['S', 'F', 'res', 'ct', 't', 'sc', 'day', 'fl', 'fc']) {
+    for (const name of ['S', 'F', 'res', 'ct', 't', 'sc', 'day', 'fl', 'fc', 'age', 'pf']) {
       this.uLoc[name] = gl.getUniformLocation(this.program!, name);
     }
 
@@ -220,6 +222,8 @@ export class Renderer {
     gl.uniform1f(this.uLoc.fl!, params.flash);
     gl.uniform3fv(this.uLoc.fc!, params.flashColor);
     gl.uniform2f(this.uLoc.ct!, params.flashCenter[0], params.flashCenter[1]);
+    if (this.uLoc.age) gl.uniform1f(this.uLoc.age, params.age);
+    if (this.uLoc.pf) gl.uniform1f(this.uLoc.pf, params.pf);
 
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     gl.bindTexture(gl.TEXTURE_2D, null);
@@ -230,6 +234,11 @@ export class Renderer {
   /** Подсветить плитку текущей цифры на дне. */
   setActiveDigit(index: number): void {
     this.floor.setActive(index);
+  }
+
+  setTheme(theme: 'day' | 'night'): void {
+    this.floor.setTheme(theme);
+    this.updateFloorTexture();
   }
 
   addDrop(x: number, y: number, radius: number, strength: number): void {

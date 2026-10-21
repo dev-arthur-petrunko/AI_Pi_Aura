@@ -36,15 +36,6 @@ export const FLOOR_PALETTE_HEX = [
   '#F7D6E6', // 9
 ] as const;
 
-function hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.slice(1), 16);
-  return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
-}
-
-const FLOOR_PALETTE_RGB: [number, number, number][] = FLOOR_PALETTE_HEX.map(
-  (h) => hexToRgb(h),
-);
-
 export class Floor {
   readonly canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -55,8 +46,14 @@ export class Floor {
   private digits: number[] = [];
   /** Какая цифра сейчас подсвечена (индекс в потоке). */
   private activeIndex = -1;
+  private theme: 'day' | 'night' = 'day';
   /** Смещение сетки по Y (пиксели), для прокрутки вглубь. */
   private scrollY = 0;
+
+  setTheme(theme: 'day' | 'night'): void {
+    this.theme = theme;
+    this.draw();
+  }
   /** Стартовый индекс цифр в массиве digits. */
   private digitStart = 0;
 
@@ -113,12 +110,15 @@ export class Floor {
     const h = this.canvas.height;
     const tile = this.tilePx;
 
-    // фон дна (нейтральный, шейдер затонирует по теме через uDay)
-    // День: #6CC3D6 плитка, #3E9DB5 шов; Ночь: #04141F дно, #0F2E40 шов
-    c.fillStyle = '#3E9DB5'; // grout color (Day default)
+    // фон дна (как в образце)
+    const day = this.theme === 'day';
+    c.fillStyle = day ? '#5FB5C9' : '#04141F';
     c.fillRect(0, 0, w, h);
 
-    // цифры на плитках
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.font = `200 ${this.fontPx}px -apple-system, 'SF Pro Display', Inter, system-ui, sans-serif`;
+
     for (let row = 0; row < this.rows; row++) {
       const worldY = row * tile - this.scrollY;
       if (worldY < -tile || worldY > h + tile) continue;
@@ -129,37 +129,25 @@ export class Floor {
         const x = col * this.tilePx + this.tilePx / 2;
         const y = worldY + this.tilePx / 2;
         const globalIndex = this.digitStart + flatIndex;
-        const isActive = this.activeIndex === globalIndex;
 
-        // оттенок плитки по хешу от индекса (как в образце)
         const hv = Math.abs(Math.sin(globalIndex * 12.9898) * 43758.5453) % 1;
-        // hsl(190 55-65% 56-62%) — темнее, чем было
-        const lightness = 56 + hv * 6;
-        const saturation = 55 + hv * 10;
-        c.fillStyle = `hsl(190 ${saturation}% ${lightness}%)`;
-        // отступ 3 px (было 2) — шов шире и темнее
-        c.fillRect(x + 3, y + 3, this.tilePx - 6, this.tilePx - 6);
+        if (day) {
+          c.fillStyle = `hsl(190 ${55 + hv * 10}% ${61 + hv * 5}%)`;
+        } else {
+          c.fillStyle = `hsl(200 55% ${9 + hv * 3}%)`;
+        }
+        c.fillRect(x + 2, y + 2, this.tilePx - 4, this.tilePx - 4);
 
-        // прозрачность цифры: сыгранные .5, будущие .32, текущая 1
         const a =
           globalIndex < this.activeIndex
-            ? 0.5
+            ? 0.34
             : globalIndex === this.activeIndex
               ? 1
-              : 0.32;
-        // Цвет цифр: День rgba(6,60,95,a), Ночь rgba(170,240,255,a)
-        // Floor texture is theme-neutral; we use Day colors (shader tints by theme)
-        c.fillStyle = `rgba(6, 60, 95, ${a})`;
-        c.font = `300 ${this.fontPx}px -apple-system, 'SF Pro Display', Inter, system-ui, sans-serif`;
+              : 0.2;
+        c.fillStyle = day
+          ? `rgba(6, 60, 95, ${a})`
+          : `rgba(170, 240, 255, ${a})`;
         c.fillText(String(digit), x, y + 2);
-
-        // Текущая плитка: цветная вспышка + тонкая светлая обводка
-        if (isActive) {
-          const [r, g, b] = FLOOR_PALETTE_RGB[digit];
-          c.strokeStyle = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, 0.9)`;
-          c.lineWidth = 3;
-          c.strokeRect(x + 3, y + 3, this.tilePx - 6, this.tilePx - 6);
-        }
       }
     }
   }

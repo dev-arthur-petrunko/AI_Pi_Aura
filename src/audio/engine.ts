@@ -146,6 +146,19 @@ export class AudioEngine {
     this.lastDigit = digit;
 
     const freq = freqForDigit(digit, this.scale);
+    // звук «пл-ик»: короткий падающий тон 700→170 Гц за 90 мс
+    const q = ctx.createOscillator();
+    const qg = ctx.createGain();
+    q.frequency.setValueAtTime(700, t);
+    q.frequency.exponentialRampToValueAtTime(170, t + 0.09);
+    qg.gain.setValueAtTime(0.09, t);
+    qg.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    q.connect(qg);
+    qg.connect(this.dry);
+    q.start(t);
+    q.stop(t + 0.13);
+    q.onended = () => { try { q.disconnect(); qg.disconnect(); } catch { /* ignore */ } };
+
     const handle = playNote(ctx, this.dry, freq, t, {
       gain: repeat ? gain * 1.45 : gain,
       octave: repeat,

@@ -46,11 +46,13 @@ export class Panel {
   private themeBtn: HTMLElement;
   private soundBtn: HTMLElement;
   private langBtn: HTMLElement;
+  private menuBtn: HTMLElement;
   private copyLinkBtn: HTMLElement;
   private verEl: HTMLElement;
   private introEl: HTMLElement;
   private theme: 'day' | 'night' = 'day';
   public onThemeChange?: (theme: 'day' | 'night') => void;
+  public onMenuToggle?: () => void;
 
   private history: number[] = [];
   private histCounts = new Array(10).fill(0);
@@ -161,6 +163,15 @@ export class Panel {
     this.langBtn.setAttribute('aria-label', t('menu.language'));
     this.footer.appendChild(this.langBtn);
 
+    // Кнопка меню (три точки)
+    this.menuBtn = document.createElement('button');
+    this.menuBtn.className = 'panel-btn';
+    this.menuBtn.innerHTML = '⋯';
+    this.menuBtn.setAttribute('aria-label', t('menu.title'));
+    this.menuBtn.setAttribute('aria-haspopup', 'dialog');
+    this.menuBtn.addEventListener('click', () => this.onMenuToggle?.());
+    this.footer.appendChild(this.menuBtn);
+
     // E4: copy link button
     this.copyLinkBtn = document.createElement('button');
     this.copyLinkBtn.className = 'panel-btn';
@@ -199,6 +210,16 @@ export class Panel {
     this.introEl.style.pointerEvents = 'none';
     this.introEl.style.zIndex = '20';
     document.body.appendChild(this.introEl);
+
+    try {
+      const raw = localStorage.getItem('pi.hist');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length === 10) {
+          this.histCounts = arr.map((n: any) => (Number.isFinite(n) ? n : 0));
+        }
+      }
+    } catch { /* ignore */ }
 
     this.setLayout(window.innerWidth);
     window.addEventListener('resize', () => this.setLayout(window.innerWidth));
@@ -268,7 +289,14 @@ export class Panel {
     this.history.push(digit);
     if (this.history.length > HISTORY_LIMIT) this.history = this.history.slice(-HISTORY_LIMIT);
     this.histCounts[digit]++;
+    try { localStorage.setItem('pi.hist', JSON.stringify(this.histCounts)); } catch { /* ignore */ }
     this.renderNow(digit, index, future);
+  }
+
+  resetCounts(): void {
+    this.histCounts = new Array(10).fill(0);
+    try { localStorage.removeItem('pi.hist'); } catch { /* ignore */ }
+    if (this.currentDigit >= 0) this.renderHistogram();
   }
 
   private renderNow(digit: number, index: number, future: number[]): void {
@@ -294,13 +322,15 @@ export class Panel {
   }
 
   private renderTape(_digit: number, _index: number, future: number[]): void {
-    const all = [...this.history, this.currentDigit, ...future];
+    const all = [...this.history, ...future];
     const show = 15;
     const start = Math.max(0, all.length - show);
     const chunk = all.slice(start);
+    const currentAllIdx = this.history.length - 1;
     const parts: string[] = [];
     for (let i = 0; i < chunk.length; i++) {
-      const isCurrent = i === chunk.length - 1;
+      const allIdx = start + i;
+      const isCurrent = allIdx === currentAllIdx;
       const d = chunk[i];
       const cls = isCurrent ? 'panel-tape-current' : 'panel-tape-digit';
       const color = isCurrent ? 'var(--ink)' : 'var(--ink-dim)';
