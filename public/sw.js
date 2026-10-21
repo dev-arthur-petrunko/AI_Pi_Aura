@@ -1,5 +1,5 @@
-/* π · Aura — минимальный Service Worker: кэш первого успеха + фоновое обновление. */
-const CACHE = 'pi-aura-v2';
+﻿/* Pi · Aura — minimal Service Worker: cache-first install + background update. */
+const CACHE = 'pi-aura-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -24,10 +24,30 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
+
+  const isNav = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+  if (isNav) {
+    event.respondWith(
+      (async () => {
+        try {
+          const fresh = await fetch(req);
+          if (fresh.ok) {
+            const copy = fresh.clone();
+            caches.open(CACHE).then((cache) => cache.put(req, copy));
+          }
+          return fresh;
+        } catch {
+          const cached = await caches.match(req);
+          return cached ?? (await caches.match('./index.html'));
+        }
+      })(),
+    );
+    return;
+  }
+
   event.respondWith(
     (async () => {
       const cached = await caches.match(req);
-      // фоновое обновление копии (stale-while-revalidate)
       const fetching = fetch(req)
         .then((res) => {
           if (res.ok && new URL(req.url).origin === self.location.origin) {

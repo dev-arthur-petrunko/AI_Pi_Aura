@@ -265,6 +265,12 @@ window.addEventListener('orientationchange', () => renderer.resize());
 
 // PWA: офлайн-кэш после первой загрузки (не в dev — чтобы видеть свежую версию)
 if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(() => {
       /* офлайн-режим не критичен */
