@@ -89,7 +89,7 @@ html, body {
 .panel-note { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 15px; color: var(--ink-dim); }
 .panel-digit-dot { width: 9px; height: 9px; border-radius: 50%; }
 
-.panel-tape { display: flex; flex-wrap: nowrap; gap: 6px; margin: 0; padding: 0; list-style: none; min-height: 30px; align-items: baseline; font-size: 19px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); }
+.panel-tape { display: flex; flex-wrap: nowrap; gap: 6px; margin: 0; padding: 0; list-style: none; min-height: 30px; align-items: baseline; font-size: 19px; font-weight: 300; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 0%, #000 88%, transparent); }
 .panel-tape-digit { color: var(--ink-dim); opacity: 0.45; }
 .panel-tape-current { color: var(--ink); opacity: 1; text-shadow: 0 0 16px currentColor; font-size: 28px; font-weight: 500; margin: 0 2px; }
 .panel-tape-sep { color: var(--ink-dim); opacity: 0.3; font-size: 16px; }
@@ -561,3 +561,19 @@ body.rest-mode #menu-backdrop {
     filter: none !important;
   }
 }
+
+
+.panel-toggle {
+  position: fixed; top: 50%; z-index: 12;
+  width: 36px; height: 52px; border-radius: 0 18px 18px 0;
+  display: none; place-items: center;
+  background: var(--glass); border: 1px solid var(--glass-border); border-left: none;
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  color: var(--ink); font-size: 20px; cursor: pointer;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.18);
+  transition: transform 0.2s var(--ease), left 0.5s var(--ease);
+  transform: translateY(-50%);
+}
+.panel-toggle:active { transform: translateY(-50%) scale(0.92); }
+.panel-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

@@ -48,6 +48,8 @@ export class Panel {
   private langBtn: HTMLElement;
   private menuBtn: HTMLElement;
   private menuFab: HTMLElement;
+  private panelToggle: HTMLElement;
+  private panelHidden = false;
   private copyLinkBtn: HTMLElement;
   private dateBtn: HTMLElement;
   private verEl: HTMLElement;
@@ -248,10 +250,33 @@ export class Panel {
     this.menuFab.addEventListener('click', () => this.onMenuToggle?.());
     document.body.appendChild(this.menuFab);
 
+    // Кнопка скрытия/показа левой панели сбоку
+    this.panelToggle = document.createElement('button');
+    this.panelToggle.className = 'panel-toggle';
+    this.panelToggle.textContent = '‹';
+    this.panelToggle.setAttribute('aria-label', 'Toggle panel');
+    this.panelToggle.addEventListener('click', () => this.togglePanel());
+    document.body.appendChild(this.panelToggle);
+
     this.setLayout(window.innerWidth);
     window.addEventListener('resize', () => this.setLayout(window.innerWidth));
     onLangChange(() => this.renderText());
   }
+  togglePanel(force?: boolean): void {
+    this.panelHidden = force ?? !this.panelHidden;
+    if (this.panelHidden) {
+      this.panel.style.transform = 'translateX(calc(-100% - 48px))';
+      this.panelToggle.textContent = '›';
+      this.panelToggle.style.left = '12px';
+      this.panelToggle.setAttribute('aria-expanded', 'false');
+    } else {
+      this.panel.style.transform = 'none';
+      this.panelToggle.textContent = '‹';
+      this.panelToggle.style.left = '360px';
+      this.panelToggle.setAttribute('aria-expanded', 'true');
+    }
+  }
+
   private setLayout(width: number): void {
     this.wide = width >= BREAKPOINT;
     if (this.wide) {
@@ -259,7 +284,7 @@ export class Panel {
       this.panel.style.top = '24px';
       this.panel.style.bottom = '24px';
       this.panel.style.width = '320px';
-      this.panel.style.transform = 'none';
+      this.panel.style.transform = this.panelHidden ? 'translateX(calc(-100% - 48px))' : 'none';
       this.panel.style.backdropFilter = 'blur(24px) saturate(160%)';
       this.panel.style.background = 'var(--glass)';
       this.panel.style.border = '1px solid var(--glass-border)';
@@ -281,6 +306,8 @@ export class Panel {
       this.footer.style.justifyContent = 'space-between';
       this.footer.style.marginTop = 'auto';
       this.menuFab.style.display = 'none';
+      this.panelToggle.style.display = 'grid';
+      this.panelToggle.style.left = this.panelHidden ? '12px' : '360px';
     } else {
       this.panel.style.left = '12px';
       this.panel.style.top = '12px';
@@ -300,6 +327,7 @@ export class Panel {
       this.panel.style.maxWidth = 'calc(100vw - 36px)';
       this.panel.style.padding = '10px 14px 10px 10px';
       this.menuFab.style.display = 'grid';
+      this.panelToggle.style.display = 'none';
       this.titleEl.style.display = 'block';
       this.subEl.style.display = 'none';
       this.digitBig.style.display = 'none';
@@ -493,6 +521,7 @@ export class Panel {
 
   dispose(): void {
     this.menuFab.remove();
+    this.panelToggle.remove();
     this.introEl.remove();
     this.versionCorner.remove();
     this.panel.remove();
