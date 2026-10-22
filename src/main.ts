@@ -397,7 +397,7 @@ if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.st
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map((r) => r.unregister()));
     } catch { /* ignore */ }
-    navigator.serviceWorker.register('./sw.js?v=9').catch(() => {
+    navigator.serviceWorker.register('./sw.js?v=10').catch(() => {
       /* офлайн-режим не критичен */
     });
   });
