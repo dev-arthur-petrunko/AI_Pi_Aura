@@ -5,10 +5,7 @@
  * Все значения синхронизируются с audioCtx.currentTime.
  */
 
-import { formatNum, getLang, onLangChange, t } from '../i18n/index.ts';
-
-declare const __BUILD_ID__: string;
-const BUILD_ID = __BUILD_ID__;
+import { formatNum, getLang, onLangChange, setLang, t } from '../i18n/index.ts';
 
 const SUN = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/></svg>';
 const MOON = '<svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z"/></svg>';
@@ -16,7 +13,7 @@ const SOUND = '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="
 
 const BREAKPOINT = 900;
 const HISTORY_LIMIT = 200;
-const FEYNMAN_INDEX = 762 - 1; // индекс (с 0) начала «999999»
+const FEYNMAN_INDEX = 762; // индекс (с 0) начала «999999»
 
 const DIGIT_NOTES: Record<number, string> = {
   0: 'До', 1: 'Ре', 2: 'Мі', 3: 'Соль', 4: 'Ля',
@@ -52,8 +49,6 @@ export class Panel {
   private panelHidden = false;
   private copyLinkBtn: HTMLElement;
   private dateBtn: HTMLElement;
-  private verEl: HTMLElement;
-  private versionCorner: HTMLElement;
   private introEl: HTMLElement;
   private theme: 'day' | 'night' = 'day';
   public onThemeChange?: (theme: 'day' | 'night') => void;
@@ -163,8 +158,13 @@ export class Panel {
     this.soundBtn.setAttribute('aria-label', t('menu.sound'));
     this.footer.appendChild(this.soundBtn);
 
-    this.langBtn = document.createElement('button');
+this.langBtn = document.createElement('button');
     this.langBtn.className = 'panel-btn';
+    this.langBtn.addEventListener('click', () => {
+      const next = getLang() === 'uk' ? 'en' : 'uk';
+      setLang(next);
+      try { (window as any).__setLang?.(next); } catch { /* ignore */ }
+    });
     this.langBtn.textContent = getLang() === 'uk' ? 'УКР' : 'ENG';
     this.langBtn.setAttribute('aria-label', t('menu.language'));
     this.footer.appendChild(this.langBtn);
@@ -199,23 +199,12 @@ export class Panel {
     });
     this.footer.appendChild(this.copyLinkBtn);
 
-    this.verEl = document.createElement('span');
-    this.verEl.className = 'panel-ver';
-    this.verEl.textContent = `v3 · ${BUILD_ID}`;
-    this.footer.appendChild(this.verEl);
-
-    // Версия в углу экрана
-    this.versionCorner = document.createElement('div');
-    this.versionCorner.className = 'app-version';
-    this.versionCorner.textContent = `v3 · ${BUILD_ID}`;
-    _root.appendChild(this.versionCorner);
-
     // подсказка первого касания (стеклянная капсула, как в образце)
     this.introEl = document.createElement('div');
     this.introEl.id = 'intro';
     this.introEl.textContent = t('intro.touch');
     this.introEl.style.position = 'fixed';
-    this.introEl.style.left = 'calc(50% + 172px)';
+    this.introEl.style.left = '50%';
     this.introEl.style.top = '50%';
     this.introEl.style.transform = 'translate(-50%,-50%)';
     this.introEl.style.padding = '14px 24px';
@@ -420,7 +409,7 @@ export class Panel {
   }
 
   private renderFeynman(index: number): void {
-    const FEYNman_INDEX = 762 - 1; // индекс с 0 для начала «999999»
+    const FEYNman_INDEX = 762; // индекс с 0 для начала «999999»
     if (index < FEYNman_INDEX) {
       const remaining = FEYNman_INDEX - index;
       this.feynmanEl.textContent = t('panel.feynmanIn', { n: formatNum(remaining) });
@@ -523,7 +512,6 @@ export class Panel {
     this.menuFab.remove();
     this.panelToggle.remove();
     this.introEl.remove();
-    this.versionCorner.remove();
     this.panel.remove();
   }
 }

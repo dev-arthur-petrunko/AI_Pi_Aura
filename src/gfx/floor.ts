@@ -154,7 +154,7 @@ export class Floor {
 
         const hv = Math.abs(Math.sin(globalIndex * 12.9898) * 43758.5453) % 1;
         if (day) {
-          c.fillStyle = isHit ? 'rgba(255,217,138,0.35)' : `hsl(190 ${55 + hv * 10}% ${61 + hv * 5}%)`;
+          c.fillStyle = isHit ? 'rgba(255,217,138,0.35)' : `hsl(190 ${55 + hv * 10}% ${52 + hv * 5}%)`;
         } else {
           c.fillStyle = isHit ? 'rgba(255,217,138,0.25)' : `hsl(200 55% ${9 + hv * 3}%)`;
         }
@@ -166,8 +166,13 @@ export class Floor {
           c.strokeRect(x + 2, y + 2, this.tilePx - 4, this.tilePx - 4);
         }
 
-        const a =
-          globalIndex < this.activeIndex
+        const a = day
+          ? globalIndex < this.activeIndex
+            ? 0.55
+            : globalIndex === this.activeIndex
+              ? 1
+              : 0.35
+          : globalIndex < this.activeIndex
             ? 0.34
             : globalIndex === this.activeIndex
               ? 1
@@ -175,7 +180,7 @@ export class Floor {
         c.fillStyle = isHit
           ? '#FFD98A'
           : day
-            ? `rgba(6, 60, 95, ${a})`
+            ? `rgba(6, 43, 69, ${a})`
             : `rgba(170, 240, 255, ${a})`;
         c.fillText(String(digit), x, y + 2);
       }

@@ -20,10 +20,10 @@ export function tilePos(
   h: number,
   panelFrac: number,
 ): { x: number; y: number } {
-  const z = Math.max(h / 9, w * (1 - panelFrac) / 16);
+  const z = Math.min(h / 9, w * (1 - panelFrac) / 16);
   const col = i % 16;
   return {
-    x: 0.5 + panelFrac / 2 + (col + 0.5 - 8) * z / w,
+    x: 0.5 + panelFrac / 2 + (col + 0.5 - 8.4) * z / w,
     y: 0.58 + (col / 16) * z / h,
   };
 }

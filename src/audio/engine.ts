@@ -12,7 +12,7 @@ import { playNote, type VoiceHandle } from './voices.ts';
  */
 
 const MAX_VOICES = 12;
-const REVERB_SEND = 0.35;
+const REVERB_SEND = 0.28;
 const FEYNMAN_CHORD = [523.25, 659.25, 783.99, 880.0]; // C–E–G–A
 
 interface ActiveVoice {
@@ -58,9 +58,9 @@ export class AudioEngine {
     master.gain.value = this.muted ? 0 : this.volume;
 
     const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -18;
-    compressor.knee.value = 24;
-    compressor.ratio.value = 4;
+    compressor.threshold.value = -22;
+    compressor.knee.value = 30;
+    compressor.ratio.value = 3;
     compressor.attack.value = 0.005;
     compressor.release.value = 0.25;
 

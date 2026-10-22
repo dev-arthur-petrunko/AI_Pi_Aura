@@ -19,8 +19,8 @@ void main(){
   vec4 s=texture(S,v);
   vec3 N=vec3(s.b,sqrt(max(0.,1.-dot(s.ba,s.ba))),s.a);
   vec2 uv=v+s.ba*.05;
-  float z=max(res.y/9.,res.x*(1.-pf)/16.);
-  vec2 tp=vec2((uv.x-.5-pf*.5)*res.x/z+8.,(1.-uv.y)*res.y/z+4.5-.42*res.y/z+sc);
+  float z=min(res.y/9.,res.x*(1.-pf)/16.);
+  vec2 tp=vec2((uv.x-.5-pf*.5)*res.x/z+8.4,(1.-uv.y)*res.y/z+5.5-.42*res.y/z+sc);
   vec2 dq=tp-ct;
   float r=length(dq), lw=exp(-age*1.1);
   float R=.6+.07*sin(age*11.)*exp(-age*3.);

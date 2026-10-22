@@ -9,7 +9,7 @@ import { AudioEngine } from './audio/engine.ts';
 import { Renderer } from './gfx/renderer.ts';
 import { PAL_HEX } from './gfx/palette.ts';
 import { tilePos } from './gfx/ripples.ts';
-import { initLang, onLangChange, t } from './i18n/index.ts';
+import { initLang, onLangChange, setLang, t } from './i18n/index.ts';
 import { Panel } from './ui/panel.ts';
 import { DateDialog } from './ui/dateDialog.ts';
 import { dateModePlan } from './pi/dateMode.ts';
@@ -22,8 +22,19 @@ import { saveMoment } from './ui/save.ts';
 
 initLang();
 
+// Глобальный fallback для переключения языка (на случай кэша/делегации)
+document.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest?.('[data-lang]') as HTMLElement | null;
+  if (!btn) return;
+  const l = btn.dataset.lang;
+  if (l !== 'uk' && l !== 'en') return;
+  setLang(l);
+  try { panel.renderText(); } catch { /* ignore */ }
+  try { menu.render(); } catch { /* ignore */ }
+});
+
 const STEP_BASE = 1400; // мс на цифру при скорости 1×
-const FEYNMAN_INDEX = 762 - 1; // индекс (с 0) начала «999999»
+const FEYNMAN_INDEX = 762; // индекс (с 0) начала «999999»
 
 const app = document.getElementById('app') as HTMLElement;
 const canvas = document.getElementById('water') as HTMLCanvasElement;
@@ -84,9 +95,9 @@ function playDigit(digit: number, index: number): void {
   }
 
   // капля в симуляцию воды: падает на плитку текущей цифры
-  const panelFrac = 324 / Math.max(canvas.clientWidth, 1);
+  const panelFrac = 0;
   const repeat = lastDigits.length > 0 && lastDigits[lastDigits.length - 1] === digit;
-  const { x, y } = tilePos(idx, canvas.clientWidth, canvas.clientHeight, panelFrac);
+  const { x, y } = tilePos(index, canvas.clientWidth, canvas.clientHeight, panelFrac);
   const R = 0.075 - 0.045 * (digit / 9);
   const K = (0.026 - 0.012 * (digit / 9)) * (repeat ? 1.8 : 1);
   renderer.addDrop(x, y, R, K);
@@ -172,23 +183,30 @@ function toggleFreeze(): void {
 
 /** Смена скорости. */
 function changeSpeed(delta: number): void {
-  speed = Math.min(2, Math.max(0.5, Math.round((speed + delta) * 100) / 100));
+  speed = Math.min(3, Math.max(0.5, Math.round((speed + delta) * 100) / 100));
   panel.setSpeedUi(speed);
   menu.setSpeedUi(speed);
 }
 
 /** Вход в режим «Дата». */
-function enterDateMode(hit: { index: number; len: number }): void {
+async function enterDateMode(hit: { index: number; len: number }): Promise<void> {
   if (!started) firstTouch();
+  // гарантируем, что поток работает поверх миллиона цифр (мгновенный seek)
+  try {
+    const s = await loadMillion();
+    stream.setMillion(s);
+    (window as any).__piMillion = s;
+  } catch { /* fallback: seek через воркер/основной поток */ }
   const prevIndex = stream.index;
-  const plan = dateModePlan(hit.index, hit.len);
+  const plan = dateModePlan(hit.index, hit.len, 0, 6);
   stream.setPersist(false);
   stream.seek(Math.max(0, plan.start));
   idx = Math.max(0, plan.start);
   renderer.setHighlight(hit.index, hit.len);
   panel.setDateBadge(true);
   dateMode = { prevIndex, start: hit.index, len: hit.len, endIndex: hit.index + hit.len - 1 };
-  nextAt = performance.now() + 350;
+  lastDigits.length = 0;
+  nextAt = performance.now() + 200;
 }
 
 function exitDateMode(stay: boolean): void {
@@ -261,6 +279,13 @@ const menu = new Menu(app, state, {
   onDate: () => dateDialog.open(),
 });
 
+(window as any).__setLang = (l: string) => {
+  if (l !== 'uk' && l !== 'en') return;
+  setLang(l as 'uk' | 'en');
+  try { panel.renderText(); } catch { /* ignore */ }
+  try { menu.render(); } catch { /* ignore */ }
+};
+
 onLangChange(() => {
   panel.renderText();
 });
@@ -287,9 +312,9 @@ function renderFrameNow(): void {
     day,
     flash: feynmanAnnounced ? 1 : 0,
     flashColor,
-    flashCenter: [idx % 16 + 0.5, 4.5] as [number, number],
+    flashCenter: [idx % 16 + 0.5, 5.5] as [number, number],
     age: started ? (performance.now() - lastDigitTime) / 1000 : 99,
-    pf: 324 / Math.max(canvas.clientWidth, 1),
+    pf: 0,
   });
 }
 
@@ -367,8 +392,12 @@ if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.st
     refreshing = true;
     window.location.reload();
   });
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js?v=3').catch(() => {
+  window.addEventListener('load', async () => {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    } catch { /* ignore */ }
+    navigator.serviceWorker.register('./sw.js?v=9').catch(() => {
       /* офлайн-режим не критичен */
     });
   });

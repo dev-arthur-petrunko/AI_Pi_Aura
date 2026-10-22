@@ -5,7 +5,7 @@ import { DRONE_FREQ } from './scales.ts';
  * (период ~12 с), очень тихо.
  */
 
-const LFO_PERIOD = 12; // секунд
+const LFO_PERIOD = 14; // секунд
 
 export class Drone {
   private nodes: (AudioScheduledSourceNode | GainNode)[] = [];
@@ -18,7 +18,7 @@ export class Drone {
     const master = ctx.createGain();
     master.gain.value = 0.0;
     master.gain.setValueAtTime(0.0001, ctx.currentTime);
-    master.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 4);
+    master.gain.linearRampToValueAtTime(0.035, ctx.currentTime + 5);
     master.connect(destination);
 
     for (const [type, detune] of [
@@ -42,7 +42,7 @@ export class Drone {
     lfo.type = 'sine';
     lfo.frequency.value = 1 / LFO_PERIOD;
     const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.02;
+    lfoGain.gain.value = 0.015;
     lfo.connect(lfoGain);
     lfoGain.connect(master.gain);
     lfo.start();

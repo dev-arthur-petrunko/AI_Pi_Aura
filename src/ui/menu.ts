@@ -61,7 +61,7 @@ export function loadState(): MenuState {
     volume: Math.min(1, Math.max(0, num(STORE.volume, 0.8))),
     muted: storeGet(STORE.muted) === '1',
     scale: storeGet(STORE.scale) === 'minor' ? 'minor' : 'major',
-    speed: Math.min(2, Math.max(0.5, num(STORE.speed, 1))),
+    speed: Math.min(3, Math.max(0.5, num(STORE.speed, 1))),
     theme: storedTheme === 'night' ? 'night' : 'day',
   };
 }
@@ -92,6 +92,13 @@ export class Menu {
     root.appendChild(this.backdrop);
     root.appendChild(this.sheet);
     this.render();
+    this.sheet.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('[data-lang]') as HTMLElement | null;
+      if (!btn) return;
+      const l = btn.dataset.lang as Lang;
+      if (l !== 'uk' && l !== 'en') return;
+      setLang(l);
+    });
     onLangChange(() => this.render());
 
     this.backdrop.addEventListener('click', () => this.close());
@@ -159,7 +166,7 @@ export class Menu {
     else this.open();
   }
 
-  private render(): void {
+  public render(): void {
     const s = this.state;
     const lang = getLang();
     this.sheet.setAttribute('aria-label', t('menu.title'));
@@ -170,8 +177,8 @@ export class Menu {
       <div class="menu-group">
         <span class="menu-label" id="lb-lang">${t('menu.language')}</span>
         <div class="menu-seg" role="radiogroup" aria-labelledby="lb-lang">
-          <button class="${lang === 'uk' ? 'active' : ''}" data-lang="uk" role="radio" aria-checked="${lang === 'uk'}">УКР</button>
-          <button class="${lang === 'en' ? 'active' : ''}" data-lang="en" role="radio" aria-checked="${lang === 'en'}">ENG</button>
+          <button class="${lang === 'uk' ? 'active' : ''}" type="button" data-lang="uk" onclick="window.__setLang && window.__setLang('uk')" role="radio" aria-checked="${lang === 'uk'}">УКР</button>
+          <button class="${lang === 'en' ? 'active' : ''}" type="button" data-lang="en" onclick="window.__setLang && window.__setLang('en')" role="radio" aria-checked="${lang === 'en'}">ENG</button>
         </div>
       </div>
 
@@ -201,7 +208,7 @@ export class Menu {
 
       <div class="menu-group">
         <span class="menu-label" id="lb-speed">${t('menu.speed')} · <span id="speed-val">${speedLabel(s.speed)}</span></span>
-        <input type="range" id="speed" class="menu-slider" min="50" max="200" step="25" value="${Math.round(s.speed * 100)}" aria-labelledby="lb-speed" />
+        <input type="range" id="speed" class="menu-slider" min="50" max="300" step="25" value="${Math.round(s.speed * 100)}" aria-labelledby="lb-speed" />
       </div>
 
       <div class="menu-btn-row">
@@ -225,14 +232,6 @@ export class Menu {
       this.sheet.querySelector<T>(sel);
 
     q<HTMLButtonElement>('#btn-close')?.addEventListener('click', () => this.close());
-
-    this.sheet.querySelectorAll<HTMLButtonElement>('[data-lang]').forEach((b) =>
-      b.addEventListener('click', () => {
-        const l = b.dataset.lang as Lang;
-        setLang(l);
-        this.actions.onLang(l);
-      }),
-    );
 
     this.sheet.querySelectorAll<HTMLButtonElement>('[data-scale]').forEach((b) =>
       b.addEventListener('click', () => {
@@ -276,6 +275,7 @@ export class Menu {
     });
 
     const speed = q<HTMLInputElement>('#speed');
+
     speed?.addEventListener('input', () => {
       const v = Number(speed.value) / 100;
       this.state.speed = v;
