@@ -124,6 +124,7 @@ function playDigit(digit: number, index: number): void {
   if (lastDigits.length > 10) lastDigits.shift();
 
   if (dateMode) {
+    console.debug('[dateMode] playing index', index, 'digit', digit, 'range', dateMode.start, dateMode.endIndex);
     if (index === dateMode.endIndex) {
       engine.feynmanChord();
     }
@@ -203,10 +204,11 @@ async function enterDateMode(hit: { index: number; len: number }): Promise<void>
   stream.seek(Math.max(0, plan.start));
   idx = Math.max(0, plan.start);
   renderer.setHighlight(hit.index, hit.len);
+  renderer.setActiveDigit(hit.index);
   panel.setDateBadge(true);
   dateMode = { prevIndex, start: hit.index, len: hit.len, endIndex: hit.index + hit.len - 1 };
   lastDigits.length = 0;
-  nextAt = performance.now() + 200;
+  nextAt = performance.now();
 }
 
 function exitDateMode(stay: boolean): void {
@@ -397,7 +399,7 @@ if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.st
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map((r) => r.unregister()));
     } catch { /* ignore */ }
-    navigator.serviceWorker.register('./sw.js?v=10').catch(() => {
+    navigator.serviceWorker.register('./sw.js?v=11').catch(() => {
       /* офлайн-режим не критичен */
     });
   });
