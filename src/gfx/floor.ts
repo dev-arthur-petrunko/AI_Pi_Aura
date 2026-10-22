@@ -86,10 +86,10 @@ export class Floor {
   /** Подсветить плитку текущей цифры (по индексу в потоке). */
   setActive(index: number): void {
     this.activeIndex = index;
-    // Загрузить цифры π вокруг текущего индекса (как в образце: r0 = floor(idx/cols) - 4)
     const row = Math.floor(index / this.cols);
     const from = Math.max(0, row - 4) * this.cols;
     this.loadDigits(from, this.cols * this.rows);
+    console.debug('[floor] setActive index', index, 'row', row, 'from', from, 'activeTileDigit', this.digits[index - from]);
   }
 
   private highlightStart = -1;
@@ -98,10 +98,10 @@ export class Floor {
   setHighlight(start: number, len: number): void {
     this.highlightStart = start;
     this.highlightLen = len;
-    // load digits around highlight
     const row = Math.floor(start / this.cols);
     const from = Math.max(0, row - 4) * this.cols;
     this.loadDigits(from, this.cols * this.rows);
+    console.debug('[floor] setHighlight start', start, 'len', len, 'row', row, 'from', from, 'firstTileDigit', this.digits[start - from]);
   }
 
   clearHighlight(): void {
