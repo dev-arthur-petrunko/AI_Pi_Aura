@@ -314,7 +314,7 @@ function renderFrameNow(): void {
     day,
     flash: feynmanAnnounced ? 1 : 0,
     flashColor,
-    flashCenter: [idx % 16 + 0.5, 5.5] as [number, number],
+    flashCenter: [idx % 16 + 0.5, 4.5] as [number, number],
     age: started ? (performance.now() - lastDigitTime) / 1000 : 99,
     pf: 0,
   });
@@ -399,7 +399,7 @@ if (!import.meta.env.DEV && 'serviceWorker' in navigator && location.protocol.st
       const regs = await navigator.serviceWorker.getRegistrations();
       await Promise.all(regs.map((r) => r.unregister()));
     } catch { /* ignore */ }
-    navigator.serviceWorker.register('./sw.js?v=12').catch(() => {
+    navigator.serviceWorker.register('./sw.js?v=13').catch(() => {
       /* офлайн-режим не критичен */
     });
   });
